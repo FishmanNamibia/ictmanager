@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -48,25 +48,37 @@ const featureCards = [
 ];
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
-  if (isAuthenticated) {
-    router.replace('/dashboard');
-    return null;
-  }
+  // Redirect already-authenticated users — do this in useEffect to avoid
+  // calling router during render (which triggers React warnings and double nav).
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, loading, router]);
 
   const onSubmit = async (data: FormData) => {
     setError(null);
+    setSubmitting(true);
     try {
       await login(data.tenantSlug.trim(), data.email.trim(), data.password);
-      router.push('/dashboard');
+      // Single navigation after login — AuthContext state update will also
+      // trigger the useEffect above, but router.replace is idempotent.
+      router.replace('/dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Don't render the form while we're checking stored auth or redirecting
+  if (loading || isAuthenticated) return null;
 
   return (
     <Box
@@ -221,6 +233,7 @@ export default function LoginPage() {
                 variant="contained"
                 fullWidth
                 size="large"
+                disabled={submitting}
                 sx={{
                   mt: 2,
                   mb: 2,
@@ -229,7 +242,7 @@ export default function LoginPage() {
                   '&:hover': { bgcolor: '#b8921f' },
                 }}
               >
-                Sign in
+                {submitting ? 'Signing in…' : 'Sign in'}
               </Button>
             </form>
             <Typography variant="caption" display="block" color="text.secondary" sx={{ lineHeight: 1.5 }}>

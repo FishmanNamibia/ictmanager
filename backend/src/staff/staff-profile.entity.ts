@@ -29,7 +29,7 @@ export class StaffProfile {
   @Column({ name: 'reports_to_user_id', type: 'varchar', nullable: true })
   reportsToUserId: string | null;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'capacity_percent', type: 'int', nullable: true })
   capacityPercent: number | null; // 0-100 workload allocation
 
   @Column({ type: 'text', nullable: true })

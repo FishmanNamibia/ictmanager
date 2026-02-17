@@ -19,7 +19,7 @@ export class StaffSkill {
   @Column({ name: 'staff_profile_id' })
   staffProfileId: string;
 
-  @Column()
+  @Column({ name: 'skill_name' })
   skillName: string;
 
   @Column({ type: 'varchar', length: 20, default: 'intermediate' }) // beginner, intermediate, advanced, expert

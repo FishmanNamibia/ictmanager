@@ -39,7 +39,13 @@ export async function api<T>(
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || 'Request failed');
+    const message = err.message || 'Request failed';
+    // Clear session on 401 so user can log in again
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('iictms_token');
+      localStorage.removeItem('iictms_user');
+    }
+    throw new Error(message);
   }
   return res.json();
 }

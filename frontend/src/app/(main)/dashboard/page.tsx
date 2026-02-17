@@ -44,14 +44,18 @@ const kpiColors = ['#1976d2', '#ed6c02', '#d32f2f', '#2e7d32', '#00897b', '#1565
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api<DashboardData>('/dashboards/ict-manager')
       .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'));
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : 'Failed to load';
+        setError(msg);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const time = new Date();
