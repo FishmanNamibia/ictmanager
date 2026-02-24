@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AssetsService } from './assets.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
@@ -23,6 +24,14 @@ export class AssetsController {
     @Query('type') type?: AssetType,
   ) {
     return this.assetsService.findAll(tenantId, { status, type });
+  }
+
+  @Get('import-template')
+  getImportTemplate(@Res() res: Response) {
+    const buffer = this.assetsService.getImportTemplateBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=assets-import-template.xlsx');
+    res.send(buffer);
   }
 
   @Get(':id')

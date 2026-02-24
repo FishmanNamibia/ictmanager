@@ -9,39 +9,42 @@ import { Criticality } from './application.entity';
 @Controller('applications')
 @UseGuards(JwtAuthGuard)
 export class ApplicationsController {
-  constructor(private readonly applicationsService: ApplicationsService) {}
+  constructor(private readonly svc: ApplicationsService) {}
 
   @Post()
   create(@TenantId() tenantId: string, @Body() dto: CreateApplicationDto) {
-    return this.applicationsService.create(tenantId, dto);
+    return this.svc.create(tenantId, dto);
+  }
+
+  @Get('stats')
+  getStats(@TenantId() tenantId: string) {
+    return this.svc.getPortfolioStats(tenantId);
   }
 
   @Get()
   findAll(
     @TenantId() tenantId: string,
     @Query('criticality') criticality?: Criticality,
-    @Query('healthStatus') healthStatus?: string,
+    @Query('status') status?: string,
+    @Query('hostingType') hostingType?: string,
+    @Query('healthLabel') healthLabel?: string,
+    @Query('search') search?: string,
   ) {
-    return this.applicationsService.findAll(tenantId, { criticality, healthStatus });
-  }
-
-  @Get('stats')
-  getStats(@TenantId() tenantId: string) {
-    return this.applicationsService.getPortfolioStats(tenantId);
+    return this.svc.findAll(tenantId, { criticality, status, hostingType, healthLabel, search });
   }
 
   @Get(':id')
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
-    return this.applicationsService.findOne(tenantId, id);
+    return this.svc.findOne(tenantId, id);
   }
 
   @Put(':id')
   update(@TenantId() tenantId: string, @Param('id') id: string, @Body() dto: UpdateApplicationDto) {
-    return this.applicationsService.update(tenantId, id, dto);
+    return this.svc.update(tenantId, id, dto);
   }
 
   @Delete(':id')
   remove(@TenantId() tenantId: string, @Param('id') id: string) {
-    return this.applicationsService.remove(tenantId, id);
+    return this.svc.remove(tenantId, id);
   }
 }

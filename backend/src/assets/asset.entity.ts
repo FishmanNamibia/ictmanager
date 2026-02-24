@@ -9,6 +9,7 @@ import {
 
 export type AssetType = 'hardware' | 'software' | 'network' | 'peripheral';
 export type AssetStatus = 'active' | 'in_use' | 'maintenance' | 'retired' | 'disposed';
+export type AssetCondition = 'new' | 'good' | 'fair' | 'poor' | 'damaged';
 
 @Entity('assets')
 @Index(['tenantId', 'assetTag'], { unique: true })
@@ -53,11 +54,26 @@ export class Asset {
   @Column({ name: 'assigned_to_user_id', type: 'varchar', nullable: true })
   assignedToUserId: string | null;
 
+  @Column({ name: 'assigned_to_name', type: 'varchar', nullable: true })
+  assignedToName: string | null;
+
   @Column({ name: 'assigned_to_department', type: 'varchar', nullable: true })
   assignedToDepartment: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   location: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  supplier: string | null;
+
+  @Column({ name: 'po_number', type: 'varchar', nullable: true })
+  poNumber: string | null;
+
+  @Column({ name: 'ip_address', type: 'varchar', nullable: true })
+  ipAddress: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  condition: string | null;
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;

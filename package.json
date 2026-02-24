@@ -7,7 +7,9 @@
     "dev:api": "pnpm --filter backend dev",
     "dev:web": "pnpm --filter frontend dev",
     "build:api": "pnpm --filter backend build",
-    "build:web": "pnpm --filter frontend build"
+    "build:web": "pnpm --filter frontend build",
+    "test:e2e": "pnpm --filter frontend e2e",
+    "test:e2e:headed": "pnpm --filter frontend e2e:headed"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

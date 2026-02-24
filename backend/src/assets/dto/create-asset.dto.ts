@@ -1,8 +1,9 @@
 import { IsIn, IsOptional, IsString, IsNumber, IsDateString, IsUUID } from 'class-validator';
-import { AssetType, AssetStatus } from '../asset.entity';
+import { AssetType, AssetStatus, AssetCondition } from '../asset.entity';
 
 const ASSET_TYPES: AssetType[] = ['hardware', 'software', 'network', 'peripheral'];
 const ASSET_STATUSES: AssetStatus[] = ['active', 'in_use', 'maintenance', 'retired', 'disposed'];
+const ASSET_CONDITIONS: AssetCondition[] = ['new', 'good', 'fair', 'poor', 'damaged'];
 
 export class CreateAssetDto {
   @IsString()
@@ -19,6 +20,10 @@ export class CreateAssetDto {
   status?: AssetStatus;
 
   @IsOptional()
+  @IsIn(ASSET_CONDITIONS)
+  condition?: AssetCondition;
+
+  @IsOptional()
   @IsString()
   manufacturer?: string;
 
@@ -29,6 +34,10 @@ export class CreateAssetDto {
   @IsOptional()
   @IsString()
   serialNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
 
   @IsOptional()
   @IsDateString()
@@ -43,8 +52,20 @@ export class CreateAssetDto {
   cost?: number;
 
   @IsOptional()
+  @IsString()
+  supplier?: string;
+
+  @IsOptional()
+  @IsString()
+  poNumber?: string;
+
+  @IsOptional()
   @IsUUID()
   assignedToUserId?: string;
+
+  @IsOptional()
+  @IsString()
+  assignedToName?: string;
 
   @IsOptional()
   @IsString()

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Box,
@@ -15,6 +16,7 @@ import {
   Menu,
   MenuItem,
   InputBase,
+  LinearProgress,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -22,13 +24,22 @@ import {
   Apps as AppsIcon,
   People as PeopleIcon,
   Key as LicenseIcon,
+  Description as PoliciesIcon,
+  Security as CybersecurityIcon,
+  Gavel as RiskComplianceIcon,
+  Business as VendorsContractsIcon,
+  Folder as ProjectsIcon,
+  PublishedWithChanges as ChangeManagementIcon,
+  Storage as DataGovernanceIcon,
+  Support as ServiceDeskIcon,
+  TrendingUp as ExecutiveIcon,
   Logout as LogoutIcon,
   Search as SearchIcon,
   Notifications as NotificationsIcon,
   Brightness4 as BrightnessIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DRAWER_WIDTH = 260;
@@ -40,6 +51,15 @@ const navItems: { path: string; label: string; icon: React.ReactNode; roles?: st
   { path: '/licenses', label: 'Licenses', icon: <LicenseIcon /> },
   { path: '/applications', label: 'Applications', icon: <AppsIcon /> },
   { path: '/staff', label: 'Staff & Skills', icon: <PeopleIcon /> },
+  { path: '/policies', label: 'ICT Policies', icon: <PoliciesIcon /> },
+  { path: '/cybersecurity', label: 'Cybersecurity', icon: <CybersecurityIcon /> },
+  { path: '/risk-compliance', label: 'ICT Risk & Compliance', icon: <RiskComplianceIcon /> },
+  { path: '/vendors-contracts', label: 'Vendors & Contracts', icon: <VendorsContractsIcon /> },
+  { path: '/projects', label: 'ICT Projects', icon: <ProjectsIcon /> },
+  { path: '/change-management', label: 'Change Management', icon: <ChangeManagementIcon /> },
+  { path: '/data-governance', label: 'Data Governance', icon: <DataGovernanceIcon /> },
+  { path: '/service-desk', label: 'Service Desk', icon: <ServiceDeskIcon /> },
+  { path: '/executive', label: 'Executive view', icon: <ExecutiveIcon /> },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -48,11 +68,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [modulesAnchor, setModulesAnchor] = useState<null | HTMLElement>(null);
+  const [navigating, setNavigating] = useState(false);
 
   const canSee = (item: (typeof navItems)[0]) => {
     if (!item.roles?.length) return true;
     return user && item.roles.includes(user.role);
   };
+
+  useEffect(() => {
+    // Preload module routes so navigation feels immediate.
+    router.prefetch('/dashboard');
+    navItems.forEach((item) => router.prefetch(item.path));
+  }, [router]);
+
+  useEffect(() => {
+    setNavigating(false);
+  }, [pathname]);
 
   const time = new Date();
   const greeting = time.getHours() < 12 ? 'Morning' : time.getHours() < 18 ? 'Afternoon' : 'Evening';
@@ -79,8 +110,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Nav: My Desk + Modules */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Typography
-              component="button"
-              onClick={() => router.push('/dashboard')}
+              component={Link}
+              href="/dashboard"
+              onClick={() => setNavigating(true)}
               sx={{
                 px: 1.5,
                 py: 0.75,
@@ -131,7 +163,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {navItems.filter(canSee).filter((i) => i.path !== '/dashboard').map((item) => (
               <MenuItem
                 key={item.path}
-                onClick={() => { router.push(item.path); setModulesAnchor(null); }}
+                component={Link}
+                href={item.path}
+                onClick={() => { setModulesAnchor(null); setNavigating(true); }}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.label} />
@@ -232,6 +266,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Menu>
         </Toolbar>
       </AppBar>
+      {navigating && (
+        <LinearProgress
+          color="secondary"
+          sx={{
+            position: 'fixed',
+            top: `${HEADER_HEIGHT}px`,
+            left: 0,
+            right: 0,
+            zIndex: (t) => t.zIndex.drawer + 2,
+          }}
+        />
+      )}
 
       <Drawer
         variant="permanent"
@@ -260,8 +306,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {navItems.filter(canSee).map((item) => (
               <ListItemButton
                 key={item.path}
+                component={Link}
+                href={item.path}
+                onClick={() => setNavigating(true)}
                 selected={pathname === item.path}
-                onClick={() => router.push(item.path)}
                 sx={{
                   mx: 1,
                   borderRadius: 1,

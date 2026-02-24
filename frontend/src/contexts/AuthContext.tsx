@@ -1,7 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, AuthUser } from '@/lib/api';
+import {
+  AUTH_UNAUTHORIZED_EVENT,
+  SESSION_EXPIRED_NOTICE_KEY,
+  authApi,
+  AuthUser,
+} from '@/lib/api';
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -22,6 +27,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+    setToken(null);
+    setUser(null);
+  }, []);
+
   const loadStored = useCallback(() => {
     if (typeof window === 'undefined') return;
     const t = localStorage.getItem(TOKEN_KEY);
@@ -31,18 +45,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(JSON.parse(u));
       } catch {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+        logout();
       }
     }
     setLoading(false);
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     loadStored();
   }, [loadStored]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleUnauthorized = (_event: Event) => {
+      sessionStorage.setItem(SESSION_EXPIRED_NOTICE_KEY, 'Session expired. Please sign in again.');
+      logout();
+    };
+
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized as EventListener);
+    return () => {
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized as EventListener);
+    };
+  }, [logout]);
 
   const login = useCallback(async (tenantSlug: string, email: string, password: string) => {
     const { accessToken, user: u } = await authApi.login(tenantSlug, email, password);
@@ -50,13 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(u));
     setToken(accessToken);
     setUser(u);
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setToken(null);
-    setUser(null);
   }, []);
 
   return (

@@ -23,6 +23,14 @@ export interface AuthResult {
   };
 }
 
+export interface AuthenticatedRequestUser {
+  id: string;
+  email: string;
+  tenantId: string;
+  role: string;
+  fullName: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -40,9 +48,18 @@ export class AuthService {
     return this.issueToken(user);
   }
 
-  async validateUser(payload: JwtPayload): Promise<User | null> {
+  async validateSession(payload: JwtPayload): Promise<AuthenticatedRequestUser | null> {
     try {
-      return await this.usersService.findById(payload.sub, payload.tenantId);
+      await this.tenantService.findActiveById(payload.tenantId);
+      const user = await this.usersService.findById(payload.sub, payload.tenantId);
+      if (!user.active) return null;
+      return {
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+        role: user.role,
+        fullName: user.fullName,
+      };
     } catch {
       return null;
     }

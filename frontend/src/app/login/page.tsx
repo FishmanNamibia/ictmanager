@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { loginPagePalette } from '@/theme';
+import { SESSION_EXPIRED_NOTICE_KEY } from '@/lib/api';
 
 type FormData = { tenantSlug: string; email: string; password: string };
 
@@ -50,7 +51,9 @@ const featureCards = [
 export default function LoginPage() {
   const { login, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const [logoSrc, setLogoSrc] = useState('/logo/ict-management-system.png');
   const [error, setError] = useState<string | null>(null);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
@@ -61,6 +64,15 @@ export default function LoginPage() {
       router.replace('/dashboard');
     }
   }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const notice = sessionStorage.getItem(SESSION_EXPIRED_NOTICE_KEY);
+    if (notice) {
+      setSessionNotice(notice);
+      sessionStorage.removeItem(SESSION_EXPIRED_NOTICE_KEY);
+    }
+  }, []);
 
   const onSubmit = async (data: FormData) => {
     setError(null);
@@ -97,23 +109,6 @@ export default function LoginPage() {
           maxWidth: 720,
         }}
       >
-        <Box sx={{ mb: 3 }}>
-          <img
-            src="/logo/logoictms.png"
-            alt="Integrated ICTMS — Monitor · Manage · Govern"
-            style={{
-              width: '100%',
-              maxWidth: 380,
-              height: 'auto',
-              maxHeight: 110,
-              objectFit: 'contain',
-              display: 'block',
-              filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.4))',
-            }}
-            width={380}
-            height={110}
-          />
-        </Box>
         <Typography variant="overline" sx={{ color: loginPagePalette.textMuted, letterSpacing: 1 }}>
           INTEGRATED ICT MANAGEMENT SYSTEM
         </Typography>
@@ -197,6 +192,11 @@ export default function LoginPage() {
                 {error}
               </Alert>
             )}
+            {sessionNotice && (
+              <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setSessionNotice(null)}>
+                {sessionNotice}
+              </Alert>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
               <TextField
                 label="Tenant (slug)"
@@ -255,3 +255,4 @@ export default function LoginPage() {
     </Box>
   );
 }
+
