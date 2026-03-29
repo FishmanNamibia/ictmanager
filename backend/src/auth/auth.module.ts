@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { TenantModule } from '../tenant/tenant.module';
 
@@ -12,6 +13,7 @@ import { TenantModule } from '../tenant/tenant.module';
   imports: [
     UsersModule,
     TenantModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     // Use registerAsync so the secret is read AFTER ConfigModule loads .env
     JwtModule.registerAsync({

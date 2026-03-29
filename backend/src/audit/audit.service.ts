@@ -22,4 +22,17 @@ export class AuditService {
     const log = this.repo.create(params);
     await this.repo.save(log);
   }
+
+  async findEntityHistory(
+    tenantId: string,
+    entityType: string,
+    entityId: string,
+    limit = 100,
+  ): Promise<AuditLog[]> {
+    return this.repo.find({
+      where: { tenantId, entityType, entityId },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
 }

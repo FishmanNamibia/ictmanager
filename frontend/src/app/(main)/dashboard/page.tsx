@@ -192,6 +192,41 @@ export default function DashboardPage() {
   const { summary, licenses } = data;
   const totalActions = summary.totalAssets + licenses.total + data.applications.total + summary.staffCount;
   const completionPct = totalActions > 0 ? Math.round((summary.staffCount / Math.max(totalActions, 1)) * 100) : 0;
+  const overduePolicies = data.governance?.overdueForReview ?? 0;
+  const expiringSoonCount = data.licenses.expiringIn30 ?? data.licenses.expiringSoon ?? 0;
+  const automationErrorCount = automationStatus?.lastRun?.errorCount ?? 0;
+
+  const priorityItems = [
+    summary.licenseIssues > 0
+      ? {
+          title: `${summary.licenseIssues} license issue${summary.licenseIssues === 1 ? '' : 's'}`,
+          detail: 'Resolve licensing exceptions and renewals before they become audit findings.',
+        }
+      : null,
+    overduePolicies > 0
+      ? {
+          title: `${overduePolicies} overdue polic${overduePolicies === 1 ? 'y' : 'ies'}`,
+          detail: 'Governance reviews are overdue and need ownership and sign-off.',
+        }
+      : null,
+    expiringSoonCount > 0
+      ? {
+          title: `${expiringSoonCount} renewal${expiringSoonCount === 1 ? '' : 's'} due soon`,
+          detail: 'Licenses expiring within 30 days need commercial follow-up now.',
+        }
+      : null,
+    automationErrorCount > 0
+      ? {
+          title: `${automationErrorCount} automation error${automationErrorCount === 1 ? '' : 's'}`,
+          detail: 'Check the last control run to confirm linked records and background checks completed.',
+        }
+      : null,
+  ].filter((item): item is { title: string; detail: string } => item !== null);
+
+  const primaryFocus = priorityItems[0] ?? {
+    title: 'No urgent exceptions',
+    detail: 'Current dashboard data does not show immediate high-priority follow-up items.',
+  };
 
   const kpis = [
     { value: summary.totalAssets, label: 'Total Assets', icon: <Computer />, color: kpiColors[0] },
@@ -228,20 +263,30 @@ export default function DashboardPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Card sx={{ bgcolor: 'rgba(255,255,255,0.15)', minWidth: 180 }}>
+          <Card sx={{ bgcolor: 'rgba(255,255,255,0.15)', minWidth: 200, maxWidth: 240 }}>
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                Performance period
+                Open priorities
               </Typography>
-              <Typography variant="h6" fontWeight={600}>FY 2025/2026</Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {priorityItems.length}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.92)' }}>
+                {priorityItems.length > 0 ? 'Items need management attention' : 'No urgent items flagged'}
+              </Typography>
             </CardContent>
           </Card>
-          <Card sx={{ bgcolor: 'rgba(255,255,255,0.15)', minWidth: 140 }}>
+          <Card sx={{ bgcolor: 'rgba(255,255,255,0.15)', minWidth: 240, maxWidth: 320 }}>
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                Daily focus
+                Immediate focus
               </Typography>
-              <Typography variant="body2" fontWeight={600}>Single source of truth</Typography>
+              <Typography variant="body1" fontWeight={700}>
+                {primaryFocus.title}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', mt: 0.5 }}>
+                {primaryFocus.detail}
+              </Typography>
             </CardContent>
           </Card>
         </Box>
@@ -369,40 +414,48 @@ export default function DashboardPage() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Security color={((data.licenses.complianceRiskScore ?? 100) < 70) ? 'error' : 'success'} />
+                <Security color={data.licenses.total === 0 ? 'disabled' : ((data.licenses.complianceRiskScore ?? 100) < 70) ? 'error' : 'success'} />
                 <Typography variant="subtitle1" fontWeight={600}>
                   License compliance risk
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
-                <Typography variant="h4" fontWeight={700} color={((data.licenses.complianceRiskScore ?? 100) < 70) ? 'error.main' : 'success.main'}>
-                  {data.licenses.complianceRiskScore ?? 100}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">/ 100</Typography>
-              </Box>
-              {(data.licenses.overAllocatedList?.length ?? 0) > 0 ? (
-                <Box sx={{ mt: 1 }}>
-                  <Chip label="Over-licensed (usage &gt; seats)" size="small" color="error" sx={{ mb: 1 }} />
-                  <List dense disablePadding>
-                    {(data.licenses.overAllocatedList ?? []).slice(0, 3).map((l) => (
-                      <ListItem key={l.id} dense sx={{ py: 0 }}>
-                        <ListItemText
-                          primary={l.softwareName}
-                          secondary={`${l.usedSeats} / ${l.totalSeats} seats`}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  <Button size="small" sx={{ mt: 0.5 }} onClick={() => router.push('/licenses')}>
-                    Fix in Licenses
-                  </Button>
-                </Box>
-              ) : (
+              {data.licenses.total === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No over-allocation. Usage vs entitlement is within limits.
+                  No licenses recorded. Add licenses to track compliance risk.
                 </Typography>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
+                    <Typography variant="h4" fontWeight={700} color={((data.licenses.complianceRiskScore ?? 100) < 70) ? 'error.main' : 'success.main'}>
+                      {data.licenses.complianceRiskScore ?? 100}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">/ 100</Typography>
+                  </Box>
+                  {(data.licenses.overAllocatedList?.length ?? 0) > 0 ? (
+                    <Box sx={{ mt: 1 }}>
+                      <Chip label="Over-licensed (usage &gt; seats)" size="small" color="error" sx={{ mb: 1 }} />
+                      <List dense disablePadding>
+                        {(data.licenses.overAllocatedList ?? []).slice(0, 3).map((l) => (
+                          <ListItem key={l.id} dense sx={{ py: 0 }}>
+                            <ListItemText
+                              primary={l.softwareName}
+                              secondary={`${l.usedSeats} / ${l.totalSeats} seats`}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'caption' }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                      <Button size="small" sx={{ mt: 0.5 }} onClick={() => router.push('/licenses')}>
+                        Fix in Licenses
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No over-allocation. Usage vs entitlement is within limits.
+                    </Typography>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

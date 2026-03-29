@@ -41,6 +41,17 @@ export class UsersService {
     });
   }
 
+  async findActiveByEmail(email: string): Promise<User[]> {
+    return this.repo.find({
+      where: {
+        email: email.toLowerCase(),
+        active: true,
+      },
+      relations: ['tenant'],
+      order: { fullName: 'ASC' },
+    });
+  }
+
   async findById(id: string, tenantId?: string): Promise<User> {
     const where: { id: string; tenantId?: string } = { id };
     if (tenantId) where.tenantId = tenantId;

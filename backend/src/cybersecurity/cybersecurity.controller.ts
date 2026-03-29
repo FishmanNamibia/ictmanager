@@ -6,9 +6,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../common/roles';
 import { SecurityIncident, IncidentStatus, IncidentSeverity, IctRisk, RiskStatus, RiskLevel, Vulnerability, VulnerabilityStatus, AccessReview, AccessReviewStatus, SecurityAuditEvidence, AuditType } from './entities';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('cybersecurity')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('cybersecurity')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class CybersecurityController {
   constructor(private readonly service: CybersecurityService) {}
 

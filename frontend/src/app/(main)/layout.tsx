@@ -1,28 +1,36 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenantSettings } from '@/contexts/TenantSettingsContext';
 import AppShell from '@/components/AppShell';
 import { Box, CircularProgress } from '@mui/material';
+import { getModuleForPath } from '@/lib/tenant-settings';
 
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  const { loading: settingsLoading, canAccessModule } = useTenantSettings();
   const router = useRouter();
+  const pathname = usePathname();
+  const activeModule = getModuleForPath(pathname);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || settingsLoading) return;
     if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
-  }, [loading, isAuthenticated, router]);
+    if (activeModule && !canAccessModule(activeModule.id, user?.role)) {
+      router.replace('/dashboard');
+    }
+  }, [activeModule, canAccessModule, isAuthenticated, loading, router, settingsLoading, user?.role]);
 
-  if (loading || !isAuthenticated) {
+  if (loading || settingsLoading || !isAuthenticated || (activeModule && !canAccessModule(activeModule.id, user?.role))) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />

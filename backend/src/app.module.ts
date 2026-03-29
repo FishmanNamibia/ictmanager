@@ -20,6 +20,7 @@ import { RiskComplianceModule } from './risk-compliance/risk-compliance.module';
 import { VendorsContractsModule } from './vendors-contracts/vendors-contracts.module';
 import { ChangeManagementModule } from './change-management/change-management.module';
 import { AutomationModule } from './automation/automation.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { getTypeOrmConfig } from './config/typeorm.config';
 
 @Module({
@@ -47,6 +48,7 @@ import { getTypeOrmConfig } from './config/typeorm.config';
     VendorsContractsModule,
     ChangeManagementModule,
     AutomationModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

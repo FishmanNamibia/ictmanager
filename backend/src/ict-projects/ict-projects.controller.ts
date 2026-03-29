@@ -6,9 +6,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
 import { Role } from '../common/roles';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('ict-projects')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ModuleAccess('projects')
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
 export class IctProjectsController {
   constructor(private readonly service: IctProjectsService) {}
 

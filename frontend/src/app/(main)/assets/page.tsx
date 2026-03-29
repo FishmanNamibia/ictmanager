@@ -1,85 +1,90 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   Box,
-  Typography,
+  Button,
   Card,
   CardContent,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Button,
-  Chip,
-  Skeleton,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
+  TextField,
+  Typography,
 } from '@mui/material';
-import { api, apiUpload } from '@/lib/api';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
+import EditIcon from '@mui/icons-material/Edit';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import AssetFormDialog, { AssetFormData } from '@/components/AssetFormDialog';
+import AssetControlDialog from '@/components/AssetControlDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiUpload, assetApi, AssetControlOverview, AssetRecord, AssetReportsSummary, getApiBaseUrl } from '@/lib/api';
 
-type Asset = {
-  id: string;
-  assetTag: string;
-  name: string;
-  type: string;
-  status: string;
-  condition: string | null;
-  manufacturer: string | null;
-  model: string | null;
-  serialNumber: string | null;
-  ipAddress: string | null;
-  purchaseDate: string | null;
-  warrantyEnd: string | null;
-  cost: number | null;
-  supplier: string | null;
-  poNumber: string | null;
-  assignedToName: string | null;
-  assignedToDepartment: string | null;
-  location: string | null;
-  notes: string | null;
-};
+function toDateInput(value: string | null) {
+  return value ? value.slice(0, 10) : '';
+}
 
-function assetToFormData(a: Asset): Partial<AssetFormData> {
+function assetToFormData(asset: AssetRecord): Partial<AssetFormData> {
   return {
-    assetTag: a.assetTag,
-    name: a.name,
-    type: a.type,
-    status: a.status,
-    condition: a.condition ?? '',
-    manufacturer: a.manufacturer ?? '',
-    model: a.model ?? '',
-    serialNumber: a.serialNumber ?? '',
-    ipAddress: a.ipAddress ?? '',
-    purchaseDate: a.purchaseDate ? a.purchaseDate.slice(0, 10) : '',
-    warrantyEnd: a.warrantyEnd ? a.warrantyEnd.slice(0, 10) : '',
-    cost: a.cost != null ? String(a.cost) : '',
-    supplier: a.supplier ?? '',
-    poNumber: a.poNumber ?? '',
-    assignedToName: a.assignedToName ?? '',
-    assignedToDepartment: a.assignedToDepartment ?? '',
-    location: a.location ?? '',
-    notes: a.notes ?? '',
+    assetTag: asset.assetTag,
+    barcode: asset.barcode ?? '',
+    name: asset.name,
+    description: asset.description ?? '',
+    type: asset.type,
+    assetSubtype: asset.assetSubtype ?? '',
+    status: asset.status,
+    condition: asset.condition ?? '',
+    manufacturer: asset.manufacturer ?? '',
+    model: asset.model ?? '',
+    serialNumber: asset.serialNumber ?? '',
+    ipAddress: asset.ipAddress ?? '',
+    purchaseDate: toDateInput(asset.purchaseDate),
+    warrantyEnd: toDateInput(asset.warrantyEnd),
+    expectedEndOfLife: toDateInput(asset.expectedEndOfLife),
+    cost: asset.cost != null ? String(asset.cost) : '',
+    usefulLifeMonths: asset.usefulLifeMonths != null ? String(asset.usefulLifeMonths) : '',
+    supplier: asset.supplier ?? '',
+    maintenanceProvider: asset.maintenanceProvider ?? '',
+    maintenanceFrequencyMonths: asset.maintenanceFrequencyMonths != null ? String(asset.maintenanceFrequencyMonths) : '',
+    lastMaintenanceDate: toDateInput(asset.lastMaintenanceDate),
+    nextMaintenanceDate: toDateInput(asset.nextMaintenanceDate),
+    maintenanceContractEnd: toDateInput(asset.maintenanceContractEnd),
+    poNumber: asset.poNumber ?? '',
+    batteryInstallDate: toDateInput(asset.batteryInstallDate),
+    batteryReplacementDue: toDateInput(asset.batteryReplacementDue),
+    loadCapacityKva: asset.loadCapacityKva != null ? String(asset.loadCapacityKva) : '',
+    runtimeMinutes: asset.runtimeMinutes != null ? String(asset.runtimeMinutes) : '',
+    protectedSystems: asset.protectedSystems ?? '',
+    assignedToName: asset.assignedToName ?? '',
+    assignedToDepartment: asset.assignedToDepartment ?? '',
+    location: asset.location ?? '',
+    notes: asset.notes ?? '',
   };
 }
 
 function formDataToPayload(data: AssetFormData): Record<string, unknown> {
   return {
     assetTag: data.assetTag.trim(),
+    barcode: data.barcode.trim() || undefined,
     name: data.name.trim(),
+    description: data.description.trim() || undefined,
     type: data.type,
+    assetSubtype: data.assetSubtype || undefined,
     status: data.status,
     condition: data.condition || undefined,
     manufacturer: data.manufacturer.trim() || undefined,
@@ -88,9 +93,21 @@ function formDataToPayload(data: AssetFormData): Record<string, unknown> {
     ipAddress: data.ipAddress.trim() || undefined,
     purchaseDate: data.purchaseDate || undefined,
     warrantyEnd: data.warrantyEnd || undefined,
+    expectedEndOfLife: data.expectedEndOfLife || undefined,
     cost: data.cost ? parseFloat(data.cost) : undefined,
+    usefulLifeMonths: data.usefulLifeMonths ? parseInt(data.usefulLifeMonths, 10) : undefined,
     supplier: data.supplier.trim() || undefined,
+    maintenanceProvider: data.maintenanceProvider.trim() || undefined,
+    maintenanceFrequencyMonths: data.maintenanceFrequencyMonths ? parseInt(data.maintenanceFrequencyMonths, 10) : undefined,
+    lastMaintenanceDate: data.lastMaintenanceDate || undefined,
+    nextMaintenanceDate: data.nextMaintenanceDate || undefined,
+    maintenanceContractEnd: data.maintenanceContractEnd || undefined,
     poNumber: data.poNumber.trim() || undefined,
+    batteryInstallDate: data.batteryInstallDate || undefined,
+    batteryReplacementDue: data.batteryReplacementDue || undefined,
+    loadCapacityKva: data.loadCapacityKva ? parseFloat(data.loadCapacityKva) : undefined,
+    runtimeMinutes: data.runtimeMinutes ? parseInt(data.runtimeMinutes, 10) : undefined,
+    protectedSystems: data.protectedSystems.trim() || undefined,
     assignedToName: data.assignedToName.trim() || undefined,
     assignedToDepartment: data.assignedToDepartment.trim() || undefined,
     location: data.location.trim() || undefined,
@@ -98,69 +115,69 @@ function formDataToPayload(data: AssetFormData): Record<string, unknown> {
   };
 }
 
+function dateChip(value: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  const expired = date < new Date();
+  return (
+    <Chip
+      label={date.toLocaleDateString()}
+      size="small"
+      color={expired ? 'error' : 'default'}
+      variant={expired ? 'filled' : 'outlined'}
+    />
+  );
+}
+
 export default function AssetsPage() {
-  const [list, setList] = useState<Asset[]>([]);
+  const { user } = useAuth();
+  const [list, setList] = useState<AssetRecord[]>([]);
+  const [overview, setOverview] = useState<AssetControlOverview['summary'] | null>(null);
+  const [reports, setReports] = useState<AssetReportsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [editingAsset, setEditingAsset] = useState<AssetRecord | null>(null);
+  const [createDefaults, setCreateDefaults] = useState<Partial<AssetFormData> | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
+  const [controlOpen, setControlOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; errors: { row: number; message: string }[] } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [alertRunMessage, setAlertRunMessage] = useState<string | null>(null);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [barcodeNotice, setBarcodeNotice] = useState<{ severity: 'success' | 'info' | 'warning'; message: string } | null>(null);
 
   const fetchList = useCallback(() => {
     setLoading(true);
-    api<Asset[]>('/assets')
+    assetApi.list()
       .then(setList)
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
 
+  const fetchOverview = useCallback(() => {
+    assetApi.controlOverview()
+      .then((data) => setOverview(data.summary))
+      .catch(() => setOverview(null));
+  }, []);
+
+  const fetchReports = useCallback(() => {
+    assetApi.reports()
+      .then(setReports)
+      .catch(() => setReports(null));
+  }, []);
+
   useEffect(() => {
     fetchList();
-  }, [fetchList]);
-
-  const handleAdd = () => {
-    setEditingAsset(null);
-    setFormOpen(true);
-  };
-
-  const handleEdit = (asset: Asset) => {
-    setEditingAsset(asset);
-    setFormOpen(true);
-  };
-
-  const handleFormSubmit = async (data: AssetFormData) => {
-    const payload = formDataToPayload(data);
-    if (editingAsset) {
-      await api(`/assets/${editingAsset.id}`, { method: 'PUT', body: JSON.stringify(payload) });
-    } else {
-      await api('/assets', { method: 'POST', body: JSON.stringify(payload) });
-    }
-    fetchList();
-  };
-
-  const handleDeleteClick = (id: string) => setDeleteId(id);
-  const handleDeleteClose = () => { setDeleteId(null); };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setDeleteSubmitting(true);
-    try {
-      await api(`/assets/${deleteId}`, { method: 'DELETE' });
-      fetchList();
-      handleDeleteClose();
-    } finally {
-      setDeleteSubmitting(false);
-    }
-  };
-
-  const assetToDelete = deleteId ? list.find((a) => a.id === deleteId) : null;
+    fetchOverview();
+    fetchReports();
+  }, [fetchList, fetchOverview, fetchReports]);
 
   const handleDownloadTemplate = async () => {
     try {
-      const baseUrl = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').trim().replace(/\/$/, '') : '';
+      const baseUrl = typeof window !== 'undefined' ? getApiBaseUrl() : '';
       const token = typeof window !== 'undefined' ? localStorage.getItem('iictms_token') : null;
       const res = await fetch(`${baseUrl}/assets/import-template`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -178,6 +195,37 @@ export default function AssetsPage() {
     }
   };
 
+  const handleDownloadReport = async (type: string) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('iictms_token') : null;
+      const res = await fetch(`${getApiBaseUrl()}/assets/reports/export?type=${encodeURIComponent(type)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to download report');
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/i);
+      const fileName = match?.[1] ?? `${type}.csv`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Report download failed');
+    }
+  };
+
+  const handleRunAlerts = async () => {
+    try {
+      const result = await assetApi.runAlerts();
+      setAlertRunMessage(`Alerts evaluated. Managers notified: ${result.notifiedManagers ?? 0}. Pending approvals: ${result.pendingApprovals ?? 0}. Open variances: ${result.openVariances ?? 0}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to run alerts');
+    }
+  };
+
   const handleImportClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -192,7 +240,11 @@ export default function AssetsPage() {
         formData.append('file', file);
         const result = await apiUpload<{ created: number; errors: { row: number; message: string }[] }>('/assets/import-excel', formData);
         setImportResult(result);
-        if (result.created > 0) fetchList();
+        if (result.created > 0) {
+          fetchList();
+          fetchOverview();
+          fetchReports();
+        }
       } catch (err) {
         setImportResult({ created: 0, errors: [{ row: 0, message: err instanceof Error ? err.message : 'Import failed' }] });
       } finally {
@@ -202,50 +254,231 @@ export default function AssetsPage() {
     input.click();
   };
 
+  const handleFormSubmit = async (data: AssetFormData) => {
+    const payload = formDataToPayload(data);
+    if (editingAsset) {
+      await assetApi.update(editingAsset.id, payload);
+    } else {
+      await assetApi.create(payload);
+    }
+    setCreateDefaults(null);
+    fetchList();
+    fetchOverview();
+    fetchReports();
+  };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const in30Days = new Date(today.getTime() + 30 * 86400000);
+  const in180Days = new Date(today.getTime() + 180 * 86400000);
+  const upsAssets = list.filter((asset) => asset.assetSubtype === 'ups');
+  const overdueMaintenance = upsAssets.filter((asset) => asset.nextMaintenanceDate && new Date(asset.nextMaintenanceDate) < today);
+  const batteryDue = upsAssets.filter((asset) => asset.batteryReplacementDue && new Date(asset.batteryReplacementDue) <= in30Days);
+  const eolDue = upsAssets.filter((asset) => asset.expectedEndOfLife && new Date(asset.expectedEndOfLife) <= in180Days);
+  const canManage = ['ict_manager', 'ict_staff'].includes(user?.role ?? '');
+  const canApprove = user?.role === 'ict_manager';
+
+  const handleBarcodeIntake = () => {
+    const code = barcodeInput.trim();
+    if (!code) {
+      setBarcodeNotice({ severity: 'warning', message: 'Scan or type a barcode first.' });
+      return;
+    }
+
+    const normalized = code.toLowerCase();
+    const matchedAsset = list.find(
+      (asset) =>
+        asset.assetTag.trim().toLowerCase() === normalized ||
+        asset.barcode?.trim().toLowerCase() === normalized,
+    );
+
+    if (matchedAsset) {
+      setSelectedAsset(matchedAsset);
+      setControlOpen(true);
+      setBarcodeNotice({
+        severity: 'success',
+        message: `Matched ${matchedAsset.assetTag}. Opened the asset control view.`,
+      });
+      setBarcodeInput('');
+      return;
+    }
+
+    if (!canManage) {
+      setBarcodeNotice({
+        severity: 'warning',
+        message: `No asset matched "${code}" and your role cannot create a new asset record.`,
+      });
+      return;
+    }
+
+    setEditingAsset(null);
+    setCreateDefaults({
+      barcode: code,
+      assetTag: code,
+    });
+    setFormOpen(true);
+    setBarcodeNotice({
+      severity: 'info',
+      message: `No existing asset matched "${code}". A new asset form has been opened with the barcode prefilled.`,
+    });
+    setBarcodeInput('');
+  };
+
   if (error) return <Typography color="error">{error}</Typography>;
 
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
-        <Typography variant="h5" fontWeight={700}>
-          Asset & software management
-        </Typography>
+        <Typography variant="h5" fontWeight={700}>Asset & software management</Typography>
         <Box display="flex" gap={1} flexWrap="wrap">
-          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={handleDownloadTemplate}>
-            Template
+          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={handleDownloadTemplate}>Template</Button>
+          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={() => void handleDownloadReport('stock-balance')}>Stock Report</Button>
+          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={() => void handleDownloadReport('audit-trail')}>Audit Export</Button>
+          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={() => void handleDownloadReport('variances')}>Variance Export</Button>
+          <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportClick} disabled={importing || !canManage}>
+            {importing ? 'Importing...' : 'Import from Excel'}
           </Button>
-          <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={handleImportClick} disabled={importing}>
-            {importing ? 'Importing…' : 'Import from Excel'}
-          </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+          <Button variant="outlined" onClick={() => void handleRunAlerts()} disabled={!canApprove}>Run Alerts</Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setEditingAsset(null);
+              setCreateDefaults(null);
+              setFormOpen(true);
+            }}
+            disabled={!canManage}
+          >
             Add asset
           </Button>
         </Box>
       </Box>
+
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Hardware inventory, warranty & lifecycle, assignment and cost tracking. Import from <strong>Excel (.xlsx, .xls) or CSV</strong> — compatible with Snipe-IT, Lansweeper, and other asset exports. Use a header row; columns such as <strong>Asset Tag</strong>, <strong>Name</strong>, Serial, Model Name, Category, Status Label, Location, Purchase Date, Purchase Cost, Assigned To, Notes are mapped automatically. If your export is &quot;Save as Web Page&quot; (.xls with no data), open it in Excel and <strong>Save As .xlsx or CSV</strong> first.
+        Track assets, warranty, lifecycle, and UPS maintenance in one register. UPS records now support battery replacement planning,
+        preventive maintenance dates, runtime, load capacity, and protected systems.
       </Typography>
 
+      {barcodeNotice && <Alert severity={barcodeNotice.severity} sx={{ mb: 2 }}>{barcodeNotice.message}</Alert>}
+      {alertRunMessage && <Alert severity="info" sx={{ mb: 2 }}>{alertRunMessage}</Alert>}
+
+      <Card variant="outlined" sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+            Barcode Intake
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Scan a barcode to open an existing asset instantly, or start a new asset record with the scanned code prefilled.
+          </Typography>
+          <Box display="flex" gap={1} flexWrap="wrap">
+            <TextField
+              label="Barcode / Scan Code"
+              value={barcodeInput}
+              onChange={(event) => setBarcodeInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleBarcodeIntake();
+                }
+              }}
+              size="small"
+              sx={{ minWidth: 280, flex: '1 1 320px' }}
+              placeholder="Scan with a barcode gun or type manually"
+            />
+            <Button variant="contained" onClick={handleBarcodeIntake}>
+              Process Scan
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setBarcodeInput('');
+                setBarcodeNotice(null);
+              }}
+            >
+              Clear
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(4, 1fr)' }} gap={2} sx={{ mb: 2 }}>
+        <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">UPS Assets</Typography><Typography variant="h5" fontWeight={700}>{upsAssets.length}</Typography></CardContent></Card>
+        <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Maintenance Overdue</Typography><Typography variant="h5" fontWeight={700} color={overdueMaintenance.length ? 'warning.main' : 'text.primary'}>{overdueMaintenance.length}</Typography></CardContent></Card>
+        <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Battery Due in 30 Days</Typography><Typography variant="h5" fontWeight={700} color={batteryDue.length ? 'error.main' : 'text.primary'}>{batteryDue.length}</Typography></CardContent></Card>
+        <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">EOL Due in 6 Months</Typography><Typography variant="h5" fontWeight={700} color={eolDue.length ? 'error.main' : 'text.primary'}>{eolDue.length}</Typography></CardContent></Card>
+      </Box>
+
+      {overview && (
+        <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(5, 1fr)' }} gap={2} sx={{ mb: 2 }}>
+          <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Movements in 30 Days</Typography><Typography variant="h5" fontWeight={700}>{overview.movementsLast30Days}</Typography></CardContent></Card>
+          <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Pending Approvals</Typography><Typography variant="h5" fontWeight={700} color={overview.pendingApprovals ? 'warning.main' : 'text.primary'}>{overview.pendingApprovals}</Typography></CardContent></Card>
+          <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Open Variances</Typography><Typography variant="h5" fontWeight={700} color={overview.openVariances ? 'error.main' : 'text.primary'}>{overview.openVariances}</Typography></CardContent></Card>
+          <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Assets With Documents</Typography><Typography variant="h5" fontWeight={700}>{overview.documentedAssets}</Typography></CardContent></Card>
+          <Card variant="outlined"><CardContent><Typography variant="caption" color="text.secondary">Verified in 90 Days</Typography><Typography variant="h5" fontWeight={700}>{overview.assetsVerifiedLast90Days}</Typography></CardContent></Card>
+        </Box>
+      )}
+
+      {reports && (
+        <Box display="grid" gridTemplateColumns={{ xs: '1fr', lg: '1.2fr 1fr' }} gap={2} sx={{ mb: 2 }}>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>Department inventory</Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Department</TableCell>
+                    <TableCell>Total</TableCell>
+                    <TableCell>In Use</TableCell>
+                    <TableCell>Maintenance</TableCell>
+                    <TableCell>Disposed</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {reports.departmentInventory.slice(0, 6).map((row) => (
+                    <TableRow key={row.department}>
+                      <TableCell>{row.department}</TableCell>
+                      <TableCell>{row.total}</TableCell>
+                      <TableCell>{row.inUse}</TableCell>
+                      <TableCell>{row.maintenance}</TableCell>
+                      <TableCell>{row.disposed}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>Asset ageing</Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Age Bucket</TableCell>
+                    <TableCell>Count</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {reports.assetAgeing.map((row) => (
+                    <TableRow key={row.label}>
+                      <TableCell>{row.label}</TableCell>
+                      <TableCell>{row.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
       {importResult && (
-        <Card variant="outlined" sx={{ mb: 2, bgcolor: importResult.errors.length > 0 ? 'action.hover' : 'success.50' }}>
+        <Card variant="outlined" sx={{ mb: 2 }}>
           <CardContent>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2">
               Import result: <strong>{importResult.created} asset(s) created</strong>
               {importResult.errors.length > 0 && ` · ${importResult.errors.length} row(s) with errors`}
             </Typography>
-            {importResult.errors.length > 0 && (
-              <Box component="ul" sx={{ m: 0, pl: 2.5, mt: 1 }}>
-                {importResult.errors.slice(0, 10).map((e, i) => (
-                  <li key={i}>
-                    <Typography variant="body2">Row {e.row}: {e.message}</Typography>
-                  </li>
-                ))}
-                {importResult.errors.length > 10 && (
-                  <Typography variant="body2" color="text.secondary">… and {importResult.errors.length - 10} more</Typography>
-                )}
-              </Box>
-            )}
-            <Button size="small" sx={{ mt: 1 }} onClick={() => setImportResult(null)}>Dismiss</Button>
           </CardContent>
         </Card>
       )}
@@ -253,85 +486,58 @@ export default function AssetsPage() {
       <Card>
         <CardContent>
           {loading ? (
-            <Skeleton variant="rectangular" height={200} />
+            <Skeleton variant="rectangular" height={220} />
           ) : (
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Tag</TableCell>
+                    <TableCell>Tag / Barcode</TableCell>
                     <TableCell>Name</TableCell>
                     <TableCell>Type</TableCell>
+                    <TableCell>Subtype</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Condition</TableCell>
-                    <TableCell>Assigned To</TableCell>
-                    <TableCell>Department</TableCell>
+                    <TableCell>UPS Lifecycle</TableCell>
                     <TableCell>Location</TableCell>
-                    <TableCell>Serial No.</TableCell>
-                    <TableCell>Warranty Expiry</TableCell>
+                    <TableCell>Assigned To</TableCell>
+                    <TableCell>Warranty</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {list.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} align="center">
-                        No assets yet. Click &quot;Add asset&quot; to create one.
-                      </TableCell>
+                      <TableCell colSpan={10} align="center">No assets yet. Click "Add asset" to create one.</TableCell>
                     </TableRow>
                   ) : (
-                    list.map((a) => (
-                      <TableRow key={a.id} hover>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{a.assetTag}</TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{a.name}</TableCell>
+                    list.map((asset) => (
+                      <TableRow key={asset.id} hover>
                         <TableCell>
-                          <Chip label={a.type} size="small" variant="outlined" />
+                          <Typography variant="body2" fontWeight={600}>{asset.assetTag}</Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Barcode: {asset.barcode ?? 'Not set'}
+                          </Typography>
                         </TableCell>
+                        <TableCell>{asset.name}</TableCell>
+                        <TableCell><Chip label={asset.type} size="small" variant="outlined" /></TableCell>
+                        <TableCell>{asset.assetSubtype ? <Chip label={asset.assetSubtype.toUpperCase()} size="small" color={asset.assetSubtype === 'ups' ? 'secondary' : 'default'} /> : '—'}</TableCell>
+                        <TableCell><Chip label={asset.status.replace('_', ' ')} size="small" color={asset.status === 'maintenance' ? 'warning' : asset.status === 'in_use' ? 'info' : asset.status === 'active' ? 'success' : 'default'} /></TableCell>
                         <TableCell>
-                          <Chip
-                            label={a.status.replace('_', ' ')}
-                            size="small"
-                            color={
-                              a.status === 'active' ? 'success'
-                                : a.status === 'in_use' ? 'info'
-                                : a.status === 'maintenance' ? 'warning'
-                                : 'default'
-                            }
-                          />
+                          {asset.assetSubtype === 'ups' ? (
+                            <Box>
+                              <Typography variant="body2" fontWeight={600}>Battery: {asset.batteryReplacementDue ? new Date(asset.batteryReplacementDue).toLocaleDateString() : 'Not set'}</Typography>
+                              <Typography variant="caption" color="text.secondary" display="block">Maintenance: {asset.nextMaintenanceDate ? new Date(asset.nextMaintenanceDate).toLocaleDateString() : 'Not set'}</Typography>
+                              <Typography variant="caption" color="text.secondary" display="block">Runtime: {asset.runtimeMinutes ?? '—'} min | Capacity: {asset.loadCapacityKva ?? '—'} kVA</Typography>
+                            </Box>
+                          ) : '—'}
                         </TableCell>
-                        <TableCell>
-                          {a.condition
-                            ? <Chip label={a.condition} size="small" variant="outlined"
-                                color={a.condition === 'new' || a.condition === 'good' ? 'success' : a.condition === 'damaged' || a.condition === 'poor' ? 'error' : 'default'} />
-                            : '—'}
-                        </TableCell>
-                        <TableCell>{a.assignedToName ?? '—'}</TableCell>
-                        <TableCell>{a.assignedToDepartment ?? '—'}</TableCell>
-                        <TableCell>{a.location ?? '—'}</TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{a.serialNumber ?? '—'}</TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          {a.warrantyEnd
-                            ? (() => {
-                                const d = new Date(a.warrantyEnd);
-                                const isExpired = d < new Date();
-                                return (
-                                  <Chip
-                                    label={d.toLocaleDateString()}
-                                    size="small"
-                                    color={isExpired ? 'error' : 'default'}
-                                    variant={isExpired ? 'filled' : 'outlined'}
-                                  />
-                                );
-                              })()
-                            : '—'}
-                        </TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                          <IconButton size="small" onClick={() => handleEdit(a)} title="Edit">
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteClick(a.id)} title="Delete" color="error">
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                        <TableCell>{asset.location ?? '—'}</TableCell>
+                        <TableCell>{asset.assignedToName ?? '—'}</TableCell>
+                        <TableCell>{dateChip(asset.warrantyEnd)}</TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" onClick={() => { setSelectedAsset(asset); setControlOpen(true); }}><VisibilityIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" onClick={() => { setEditingAsset(asset); setFormOpen(true); }} disabled={!canManage}><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="error" onClick={() => setDeleteId(asset.id)} disabled={!canApprove}><DeleteIcon fontSize="small" /></IconButton>
                         </TableCell>
                       </TableRow>
                     ))
@@ -345,26 +551,53 @@ export default function AssetsPage() {
 
       <AssetFormDialog
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditingAsset(null); }}
+        onClose={() => {
+          setFormOpen(false);
+          setEditingAsset(null);
+          setCreateDefaults(null);
+        }}
         onSubmit={handleFormSubmit}
-        initialValues={editingAsset ? assetToFormData(editingAsset) : null}
+        initialValues={editingAsset ? assetToFormData(editingAsset) : createDefaults}
+        lockAssetTag={!!editingAsset}
         title={editingAsset ? 'Edit asset' : 'Add asset'}
         submitLabel={editingAsset ? 'Save' : 'Create'}
       />
 
-      <Dialog open={!!deleteId} onClose={handleDeleteClose}>
+      <AssetControlDialog
+        asset={selectedAsset}
+        open={controlOpen}
+        onClose={() => { setControlOpen(false); setSelectedAsset(null); }}
+        onChanged={() => { fetchList(); fetchOverview(); fetchReports(); }}
+        canManage={canManage}
+        canApprove={canApprove}
+      />
+
+      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}>
         <DialogTitle>Delete asset</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            {assetToDelete
-              ? `Delete "${assetToDelete.name}" (${assetToDelete.assetTag})? This cannot be undone.`
-              : 'Delete this asset?'}
-          </DialogContentText>
+          <DialogContentText>This action cannot be undone.</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteClose}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained" disabled={deleteSubmitting}>
-            {deleteSubmitting ? 'Deleting…' : 'Delete'}
+          <Button onClick={() => setDeleteId(null)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={deleteSubmitting}
+            onClick={async () => {
+              if (!deleteId) return;
+              setDeleteSubmitting(true);
+              try {
+                await assetApi.remove(deleteId);
+                fetchList();
+                fetchOverview();
+                fetchReports();
+                setDeleteId(null);
+              } finally {
+                setDeleteSubmitting(false);
+              }
+            }}
+          >
+            {deleteSubmitting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

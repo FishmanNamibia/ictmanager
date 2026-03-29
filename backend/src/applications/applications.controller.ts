@@ -2,12 +2,15 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } fro
 import { ApplicationsService } from './applications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { Criticality } from './application.entity';
 
 @Controller('applications')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('applications')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class ApplicationsController {
   constructor(private readonly svc: ApplicationsService) {}
 

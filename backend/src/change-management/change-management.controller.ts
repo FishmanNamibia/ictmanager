@@ -6,9 +6,12 @@ import { Role } from '../common/roles';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
 import { ChangeManagementService } from './change-management.service';
 import { ChangeRequest, ReleaseRecord } from './entities';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('change-management')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ModuleAccess('change-management')
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
 export class ChangeManagementController {
   constructor(private readonly service: ChangeManagementService) {}
 
@@ -88,4 +91,3 @@ export class ChangeManagementController {
     return this.service.getDashboardStats(tenantId);
   }
 }
-

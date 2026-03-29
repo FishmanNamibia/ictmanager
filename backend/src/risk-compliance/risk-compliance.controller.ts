@@ -4,11 +4,14 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../common/roles';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
-import { AuditFinding, RiskRegisterItem } from './entities';
+import { AuditFinding, DisasterRecoveryPlan, RiskRegisterItem } from './entities';
 import { RiskComplianceService } from './risk-compliance.service';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('risk-compliance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ModuleAccess('risk-compliance')
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
 export class RiskComplianceController {
   constructor(private readonly service: RiskComplianceService) {}
 
@@ -84,9 +87,48 @@ export class RiskComplianceController {
     return this.service.deleteFinding(tenantId, id);
   }
 
+  @Get('dr-plans')
+  listDisasterRecoveryPlans(@TenantId() tenantId: string): Promise<DisasterRecoveryPlan[]> {
+    return this.service.listDisasterRecoveryPlans(tenantId);
+  }
+
+  @Get('dr-plans/:id')
+  getDisasterRecoveryPlan(@TenantId() tenantId: string, @Param('id') id: string): Promise<DisasterRecoveryPlan> {
+    return this.service.getDisasterRecoveryPlan(tenantId, id);
+  }
+
+  @Post('dr-plans')
+  @Roles(Role.ICT_MANAGER)
+  createDisasterRecoveryPlan(
+    @TenantId() tenantId: string,
+    @Body() body: Partial<DisasterRecoveryPlan>,
+  ): Promise<DisasterRecoveryPlan> {
+    return this.service.createDisasterRecoveryPlan(tenantId, body);
+  }
+
+  @Put('dr-plans/:id')
+  @Roles(Role.ICT_MANAGER)
+  updateDisasterRecoveryPlan(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() body: Partial<DisasterRecoveryPlan>,
+  ): Promise<DisasterRecoveryPlan> {
+    return this.service.updateDisasterRecoveryPlan(tenantId, id, body);
+  }
+
+  @Delete('dr-plans/:id')
+  @Roles(Role.ICT_MANAGER)
+  deleteDisasterRecoveryPlan(@TenantId() tenantId: string, @Param('id') id: string): Promise<void> {
+    return this.service.deleteDisasterRecoveryPlan(tenantId, id);
+  }
+
+  @Get('dr-overview')
+  getDisasterRecoveryOverview(@TenantId() tenantId: string) {
+    return this.service.getDisasterRecoveryOverview(tenantId);
+  }
+
   @Get('dashboard-stats')
   getDashboardStats(@TenantId() tenantId: string) {
     return this.service.getDashboardStats(tenantId);
   }
 }
-

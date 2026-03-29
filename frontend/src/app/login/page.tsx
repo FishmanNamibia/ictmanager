@@ -6,6 +6,7 @@ import {
   Box,
   Card,
   CardContent,
+  Link as MuiLink,
   TextField,
   Button,
   Typography,
@@ -20,10 +21,11 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
-import { loginPagePalette } from '@/theme';
-import { SESSION_EXPIRED_NOTICE_KEY } from '@/lib/api';
+import { getLoginPagePalette } from '@/theme';
+import { SESSION_EXPIRED_NOTICE_KEY, tenantApi } from '@/lib/api';
+import { DEFAULT_TENANT_SETTINGS, normalizeTenantSettings, PublicTenantBranding } from '@/lib/tenant-settings';
 
-type FormData = { tenantSlug: string; email: string; password: string };
+type FormData = { email: string; password: string };
 
 const featureCards = [
   {
@@ -55,7 +57,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [branding, setBranding] = useState<PublicTenantBranding | null>(null);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
+  const effectiveSettings = branding
+    ? normalizeTenantSettings({
+        tenantId: branding.tenantId,
+        tenantSlug: branding.tenantSlug,
+        branding: branding.branding,
+        theme: branding.theme,
+      })
+    : DEFAULT_TENANT_SETTINGS;
+  const loginPagePalette = getLoginPagePalette(effectiveSettings.theme);
 
   // Redirect already-authenticated users — do this in useEffect to avoid
   // calling router during render (which triggers React warnings and double nav).
@@ -74,11 +86,29 @@ export default function LoginPage() {
     }
   }, []);
 
+  useEffect(() => {
+    setLogoSrc(effectiveSettings.branding.logoUrl || '/logo/ict-management-system.png');
+  }, [effectiveSettings.branding.logoUrl]);
+
+  useEffect(() => {
+    let active = true;
+    void tenantApi.getDefaultBranding()
+      .then((result) => {
+        if (active) setBranding(result);
+      })
+      .catch(() => {
+        if (active) setBranding(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const onSubmit = async (data: FormData) => {
     setError(null);
     setSubmitting(true);
     try {
-      await login(data.tenantSlug.trim(), data.email.trim(), data.password);
+      await login(data.email.trim(), data.password);
       // Single navigation after login — AuthContext state update will also
       // trigger the useEffect above, but router.replace is idempotent.
       router.replace('/dashboard');
@@ -110,7 +140,7 @@ export default function LoginPage() {
         }}
       >
         <Typography variant="overline" sx={{ color: loginPagePalette.textMuted, letterSpacing: 1 }}>
-          INTEGRATED ICT MANAGEMENT SYSTEM
+          {effectiveSettings.branding.organizationName.toUpperCase()}
         </Typography>
         <Typography
           variant="h4"
@@ -122,15 +152,10 @@ export default function LoginPage() {
             lineHeight: 1.3,
           }}
         >
-          Your digital workspace for{' '}
-          <Box component="span" sx={{ color: loginPagePalette.accent }}>
-            everyday
-          </Box>{' '}
-          ICT management.
+          {effectiveSettings.branding.loginHeadline}
         </Typography>
         <Typography sx={{ color: loginPagePalette.textMuted, mb: 3, maxWidth: 520 }}>
-          Use I-ICTMS to manage assets and licenses, track applications, oversee ICT staff and skills,
-          and report on risk and performance — securely, in one place.
+          {effectiveSettings.branding.loginSubtext}
         </Typography>
         <Grid container spacing={2}>
           {featureCards.map((card, i) => (
@@ -178,14 +203,29 @@ export default function LoginPage() {
           }}
         >
           <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <img
+                src={logoSrc}
+                alt={effectiveSettings.branding.organizationName}
+                width={56}
+                height={56}
+                style={{ objectFit: 'contain', borderRadius: 8 }}
+                onError={() => setLogoSrc('/logo/ict-management-system.png')}
+              />
+              <Box>
+                <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1 }}>
+                  {effectiveSettings.branding.organizationName}
+                </Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  {effectiveSettings.branding.systemName}
+                </Typography>
+              </Box>
+            </Box>
             <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1 }}>
               SECURE SIGN-IN
             </Typography>
-            <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5, mb: 0.5 }}>
-              I-ICTMS
-            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Access your ICT command centre. Sign in with your tenant and credentials.
+              {effectiveSettings.branding.tagline}. Sign in with your email and password.
             </Typography>
             {error && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -198,16 +238,6 @@ export default function LoginPage() {
               </Alert>
             )}
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
-              <TextField
-                label="Tenant (slug)"
-                fullWidth
-                margin="normal"
-                required
-                {...register('tenantSlug', { required: 'Required' })}
-                error={!!errors.tenantSlug}
-                helperText={errors.tenantSlug?.message}
-                placeholder="e.g. demo"
-              />
               <TextField
                 label="Email"
                 type="email"
@@ -249,10 +279,25 @@ export default function LoginPage() {
               By signing in, you confirm that you are an authorized user and agree to comply with
               internal governance and security policies. All access is monitored and logged.
             </Typography>
+            <Typography
+              variant="caption"
+              display="block"
+              color="text.secondary"
+              sx={{ lineHeight: 1.5, mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider', textAlign: 'center' }}
+            >
+              <MuiLink
+                href="https://dynaverseinvestment.com"
+                target="_blank"
+                rel="noreferrer"
+                underline="hover"
+                color="inherit"
+              >
+                dyanverse investment product
+              </MuiLink>
+            </Typography>
           </CardContent>
         </Card>
       </Box>
     </Box>
   );
 }
-

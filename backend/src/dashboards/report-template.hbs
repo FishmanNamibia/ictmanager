@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ICT Executive Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
+
+  /* --- PAGE LAYOUT --- */
+  .page { width: 794px; min-height: 1123px; padding: 48px 52px; page-break-after: always; position: relative; }
+  .page:last-child { page-break-after: avoid; }
+  @page { size: A4; margin: 0; }
+  @media print { body { margin: 0; } }
+
+  /* --- COVER PAGE --- */
+  .cover { background: linear-gradient(160deg, #0d2137 0%, #1a3a5c 60%, #0d2137 100%); color: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover-top { padding-top: 40px; }
+  .cover-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #c9a227; font-weight: 600; margin-bottom: 16px; }
+  .cover-title { font-size: 42px; font-weight: 700; line-height: 1.1; margin-bottom: 8px; }
+  .cover-subtitle { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+  .cover-date { font-size: 13px; color: rgba(255,255,255,0.6); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px; display: inline-block; }
+  .cover-body { flex: 1; display: flex; align-items: center; gap: 40px; padding: 40px 0; }
+  .score-ring-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .score-ring-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-top: 8px; }
+  .score-ring-value { font-size: 13px; font-weight: 600; color: #fff; margin-top: 2px; }
+  .cover-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; }
+  .kpi-tile { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 14px 16px; }
+  .kpi-tile-label { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .kpi-tile-value { font-size: 26px; font-weight: 700; line-height: 1; }
+  .kpi-tile-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+  .kpi-tile.red .kpi-tile-value { color: #f87171; }
+  .kpi-tile.amber .kpi-tile-value { color: #fbbf24; }
+  .kpi-tile.green .kpi-tile-value { color: #86efac; }
+  .kpi-tile.blue .kpi-tile-value { color: #93c5fd; }
+  .cover-summary-box { background: rgba(255,255,255,0.06); border-left: 3px solid #c9a227; border-radius: 0 6px 6px 0; padding: 16px 20px; margin-top: 8px; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.85); }
+  .cover-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.4); }
+
+  /* --- PAGE HEADER --- */
+  .page-header { border-bottom: 2px solid #0d2137; padding-bottom: 10px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .page-header-title { font-size: 18px; font-weight: 700; color: #0d2137; }
+  .page-header-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .page-header-right { text-align: right; font-size: 10px; color: #94a3b8; }
+
+  /* --- PAGE FOOTER --- */
+  .page-footer { position: absolute; bottom: 24px; left: 52px; right: 52px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; }
+
+  /* --- SECTION TITLE --- */
+  .section-title { font-size: 14px; font-weight: 700; color: #0d2137; margin-bottom: 4px; margin-top: 20px; display: flex; align-items: center; gap: 10px; }
+  .section-title:first-child { margin-top: 0; }
+  .section-divider { border: none; border-top: 1px solid #e2e8f0; margin: 18px 0; }
+
+  /* --- RAG BADGES --- */
+  .rag-badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .rag-critical { background: #FCEBEB; color: #A32D2D; border: 1px solid #F09595; }
+  .rag-high     { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+  .rag-medium   { background: #FAEEDA; color: #854F0B; border: 1px solid #EF9F27; }
+  .rag-low      { background: #EAF3DE; color: #3B6D11; border: 1px solid #97C459; }
+  .rag-stable   { background: #EAF3DE; color: #3B6D11; border: 1px solid #97C459; }
+  .rag-watch    { background: #FAEEDA; color: #854F0B; border: 1px solid #EF9F27; }
+  .rag-good     { background: #EAF3DE; color: #3B6D11; border: 1px solid #97C459; }
+  .rag-warning  { background: #FAEEDA; color: #854F0B; border: 1px solid #EF9F27; }
+
+  /* --- DATA QUALITY BANNER --- */
+  .dq-banner { background: #FAEEDA; border-left: 4px solid #EF9F27; padding: 10px 16px; border-radius: 0 4px 4px 0; margin-bottom: 14px; font-size: 10.5px; line-height: 1.5; }
+  .dq-banner strong { color: #854F0B; }
+  .dq-banner-low { background: #FCEBEB; border-left-color: #F09595; }
+  .dq-banner-low strong { color: #A32D2D; }
+  .dq-banner-high { background: #EAF3DE; border-left-color: #97C459; }
+  .dq-banner-high strong { color: #3B6D11; }
+
+  /* --- METRIC GRID --- */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+  .metric-card { border-radius: 6px; border: 1px solid #e2e8f0; padding: 12px 14px; background: #f8fafc; position: relative; overflow: hidden; }
+  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .metric-card.good::before  { background: #3a7d44; }
+  .metric-card.warning::before { background: #d4891a; }
+  .metric-card.critical::before { background: #c0392b; }
+  .metric-card-label { font-size: 9.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .metric-card-value { font-size: 20px; font-weight: 700; color: #1e293b; line-height: 1; }
+  .metric-card.good .metric-card-value  { color: #3a7d44; }
+  .metric-card.warning .metric-card-value { color: #d4891a; }
+  .metric-card.critical .metric-card-value { color: #c0392b; }
+
+  /* --- BULLET LISTS --- */
+  .bullet-list { list-style: none; margin: 6px 0; }
+  .bullet-list li { padding: 4px 0 4px 18px; position: relative; font-size: 10.5px; line-height: 1.5; border-bottom: 1px solid #f1f5f9; }
+  .bullet-list li:last-child { border-bottom: none; }
+  .bullet-list li::before { content: '▶'; position: absolute; left: 0; color: #c9a227; font-size: 8px; top: 6px; }
+  .bullet-list.risk li::before { color: #c0392b; content: '●'; font-size: 7px; top: 7px; }
+  .bullet-list.rec li::before  { color: #3a7d44; content: '✓'; font-size: 9px; top: 5px; }
+
+  /* --- TWO-COLUMN LAYOUT --- */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* --- DOMAIN SECTION --- */
+  .domain-section { margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
+  .domain-header { background: #0d2137; color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .domain-header-title { font-size: 12px; font-weight: 700; }
+  .domain-body { padding: 14px 16px; }
+  .domain-summary { font-size: 10.5px; line-height: 1.6; color: #334155; margin-bottom: 10px; }
+
+  /* --- TABLE --- */
+  .report-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .report-table thead tr { background: #0d2137; color: #fff; }
+  .report-table thead th { padding: 8px 10px; text-align: left; font-weight: 600; letter-spacing: 0.3px; }
+  .report-table tbody tr:nth-child(even) { background: #f8fafc; }
+  .report-table tbody tr:hover { background: #f1f5f9; }
+  .report-table tbody td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; line-height: 1.4; }
+  .priority-critical { color: #c0392b; font-weight: 700; }
+  .priority-high     { color: #d4891a; font-weight: 700; }
+  .priority-medium   { color: #2471a3; font-weight: 600; }
+  .priority-low      { color: #3a7d44; font-weight: 600; }
+
+  /* --- CHART CONTAINER --- */
+  .chart-wrap { display: flex; justify-content: center; margin: 8px 0; }
+  .chart-wrap img { max-width: 100%; height: auto; }
+
+  /* --- INFO BOX --- */
+  .info-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px 16px; margin: 10px 0; font-size: 10.5px; line-height: 1.5; }
+  .info-box.warn { background: #FAEEDA; border-color: #EF9F27; }
+  .info-box.success { background: #EAF3DE; border-color: #97C459; }
+  .info-box-title { font-weight: 700; color: #0d2137; margin-bottom: 4px; font-size: 11px; }
+
+  /* --- MISC --- */
+  .gold { color: #c9a227; }
+  .muted { color: #64748b; }
+  .bold { font-weight: 700; }
+  .text-sm { font-size: 10px; }
+  .mt-8 { margin-top: 8px; }
+  .mb-8 { margin-bottom: 8px; }
+  .sub-heading { font-size: 11px; font-weight: 700; color: #334155; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER PAGE ===== -->
+<div class="page cover">
+  <div class="cover-top">
+    <div class="cover-label">{{systemName}}</div>
+    <div class="cover-title">{{reportTitle}}</div>
+    <div class="cover-subtitle">ICT Performance, Risk &amp; Assurance Overview</div>
+    <div class="cover-date">{{reportDate}} &nbsp;|&nbsp; Prepared for {{audience}}</div>
+  </div>
+
+  <div class="cover-body">
+    <!-- Score Ring -->
+    <div class="score-ring-wrap">
+      <img src="{{scoreChart}}" width="160" height="160" alt="Score Ring"/>
+      <div class="score-ring-label">ICT Score</div>
+      <div class="score-ring-value">{{ictScore}} / 100</div>
+    </div>
+
+    <!-- KPI Tiles -->
+    <div class="cover-kpis">
+      <div class="kpi-tile {{topRisksColor}}">
+        <div class="kpi-tile-label">Top Risks</div>
+        <div class="kpi-tile-value">{{topRisksCount}}</div>
+        <div class="kpi-tile-sub">Requiring Attention</div>
+      </div>
+      <div class="kpi-tile {{watchColor}}">
+        <div class="kpi-tile-label">Watch Items</div>
+        <div class="kpi-tile-value">{{watchCount}}</div>
+        <div class="kpi-tile-sub">Under Monitoring</div>
+      </div>
+      <div class="kpi-tile {{actionsColor}}">
+        <div class="kpi-tile-label">Mgmt Actions</div>
+        <div class="kpi-tile-value">{{actionsCount}}</div>
+        <div class="kpi-tile-sub">Management Required</div>
+      </div>
+      <div class="kpi-tile {{domainsColor}}">
+        <div class="kpi-tile-label">Low Confidence</div>
+        <div class="kpi-tile-value">{{lowConfidenceCount}}</div>
+        <div class="kpi-tile-sub">Domains</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Posture Summary -->
+  <div class="cover-summary-box">
+    <strong>Overall Posture: <span class="rag-badge rag-{{posture}}">{{postureLabel}}</span></strong><br/>
+    {{headlineSummary}}
+  </div>
+
+  <div class="cover-footer">
+    <span>{{confidentialityLabel}}</span>
+    <span>{{reportDate}}</span>
+  </div>
+</div>
+
+<!-- ===== PAGE 2: EXECUTIVE SUMMARY ===== -->
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-header-title">1. Executive Summary</div>
+      <div class="page-header-sub">Overall institutional ICT posture and key highlights</div>
+    </div>
+    <div class="page-header-right">{{reportTitle}} &nbsp;|&nbsp; {{reportDate}}</div>
+  </div>
+
+  <div class="domain-summary" style="font-size:11px; line-height:1.7; padding: 12px 16px; background:#f8fafc; border-radius:6px; border-left:3px solid #0d2137; margin-bottom:16px;">
+    {{overallPosture}}
+  </div>
+
+  <div class="two-col" style="margin-bottom:16px;">
+    <div>
+      <div class="sub-heading">Key Achievements</div>
+      <ul class="bullet-list rec">
+        {{#each achievements}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    <div>
+      <div class="sub-heading">Top Risks &amp; Watch Items</div>
+      <ul class="bullet-list risk">
+        {{#each topRisksAndWatch}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  {{#if decisionsRequired.length}}
+  <div class="sub-heading">Decisions Required from Management</div>
+  <ul class="bullet-list">
+    {{#each decisionsRequired}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+
+  <hr class="section-divider"/>
+
+  <!-- Domain Performance Overview Chart -->
+  <div class="sub-heading">Domain Performance Overview</div>
+  <div class="two-col" style="align-items:center;">
+    <div>
+      <div class="chart-wrap"><img src="{{kpiBarChart}}" alt="Domain Performance"/></div>
+    </div>
+    <div>
+      <div class="chart-wrap"><img src="{{riskPieChart}}" alt="Risk Distribution"/></div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>{{reportTitle}} — CONFIDENTIAL</span>
+    <span>Executive Summary</span>
+  </div>
+</div>
+
+<!-- ===== PAGE 3+: DOMAIN ANALYSIS ===== -->
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-header-title">2. Domain Analysis</div>
+      <div class="page-header-sub">Detailed assessment by ICT domain</div>
+    </div>
+    <div class="page-header-right">{{reportTitle}} &nbsp;|&nbsp; {{reportDate}}</div>
+  </div>
+
+  {{#each sections}}
+  <div class="domain-section">
+    <div class="domain-header">
+      <div class="domain-header-title">{{sectionIndex}}. {{title}}</div>
+      <span class="rag-badge rag-{{boardAttentionLevel}}">{{boardAttentionLevelLabel}}</span>
+    </div>
+    <div class="domain-body">
+
+      {{#if hasDataWarning}}
+      <div class="dq-banner {{dataConfidenceClass}}">
+        <strong>Data confidence: {{dataConfidence.level}}.</strong> {{dataConfidence.narrative}}
+      </div>
+      {{/if}}
+
+      <div class="domain-summary">{{summary}}</div>
+
+      <div class="metric-grid">
+        {{#each keyMetrics}}
+        <div class="metric-card {{status}}">
+          <div class="metric-card-label">{{label}}</div>
+          <div class="metric-card-value">{{value}}</div>
+        </div>
+        {{/each}}
+      </div>
+
+      {{#if domainChart}}
+      <div class="chart-wrap" style="margin: 8px 0 4px;">
+        <img src="{{domainChart}}" alt="{{title}} metrics"/>
+      </div>
+      {{/if}}
+
+      <div class="two-col" style="margin-top:10px;">
+        {{#if keyRisks.length}}
+        <div>
+          <div class="sub-heading" style="color:#c0392b;">Key Risks</div>
+          <ul class="bullet-list risk">
+            {{#each keyRisks}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+        {{#if recommendations.length}}
+        <div>
+          <div class="sub-heading" style="color:#3a7d44;">Recommendations</div>
+          <ul class="bullet-list rec">
+            {{#each recommendations}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  {{/each}}
+
+  <div class="page-footer">
+    <span>{{reportTitle}} — CONFIDENTIAL</span>
+    <span>Domain Analysis</span>
+  </div>
+</div>
+
+<!-- ===== PAGE 4: MANAGEMENT ACTION REGISTER ===== -->
+<div class="page" style="page-break-before: always;">
+  <div class="page-header">
+    <div>
+      <div class="page-header-title">3. Management Action Register</div>
+      <div class="page-header-sub">Priority items requiring executive follow-through</div>
+    </div>
+    <div class="page-header-right">{{reportTitle}} &nbsp;|&nbsp; {{reportDate}}</div>
+  </div>
+
+  {{#if managementActions.length}}
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th style="width:22%">Issue</th>
+        <th style="width:30%">Recommended Action</th>
+        <th style="width:18%">Business Impact</th>
+        <th style="width:8%">Priority</th>
+        <th style="width:12%">Owner</th>
+        <th style="width:10%">Due Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each managementActions}}
+      <tr>
+        <td class="bold">{{issue}}</td>
+        <td>{{recommendedAction}}</td>
+        <td class="muted">{{businessImpact}}</td>
+        <td class="priority-{{priorityClass}}">{{priority}}</td>
+        <td>{{owner}}</td>
+        <td class="muted">{{dueDate}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="info-box success">
+    <div class="info-box-title">✓ No Urgent Actions</div>
+    No urgent management actions are required at this time. Continue monitoring via the executive dashboard.
+  </div>
+  {{/if}}
+
+  <hr class="section-divider"/>
+
+  <!-- DATA QUALITY STATEMENT -->
+  <div class="section-title">4. Data Quality Statement</div>
+
+  {{#if hasLowConfidence}}
+  <div class="dq-banner dq-banner-low" style="margin-bottom:12px;">
+    <strong>⚠ Data Quality Notice:</strong> Current reporting is based on limited or incomplete data sources
+    in {{lowConfidenceCount}} domain(s). Zero or low values may reflect incomplete data capture,
+    not genuine stability. Validate source completeness before acting on these figures.
+  </div>
+  {{else}}
+  <div class="dq-banner dq-banner-high">
+    <strong>✓ Data Quality Assurance:</strong> Reporting is based on reliable data sources across all domains.
+    Metrics and insights can be used with high confidence for decision-making.
+  </div>
+  {{/if}}
+
+  {{#if lowConfidenceDomains.length}}
+  <div class="sub-heading">Domains Requiring Data Improvement</div>
+  <ul class="bullet-list risk">
+    {{#each lowConfidenceDomains}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+
+  <!-- WAY FORWARD -->
+  <hr class="section-divider"/>
+  <div class="section-title">5. Way Forward</div>
+  <ul class="bullet-list">
+    {{#each wayForward}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+
+  <div class="page-footer">
+    <span>{{reportTitle}} — CONFIDENTIAL</span>
+    <span>Page 4 &nbsp;|&nbsp; Generated {{reportDate}}</span>
+  </div>
+</div>
+
+</body>
+</html>

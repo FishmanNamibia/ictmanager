@@ -6,9 +6,12 @@ import { Role } from '../common/roles';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
 import { Vendor, VendorContract } from './entities';
 import { VendorsContractsService } from './vendors-contracts.service';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('vendors-contracts')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ModuleAccess('vendors-contracts')
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
 export class VendorsContractsController {
   constructor(private readonly service: VendorsContractsService) {}
 
@@ -88,4 +91,3 @@ export class VendorsContractsController {
     return this.service.getDashboardStats(tenantId);
   }
 }
-

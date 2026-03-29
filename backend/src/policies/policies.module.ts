@@ -12,7 +12,7 @@ import { SoftwareLicense } from '../assets/software-license.entity';
 import { PoliciesService } from './policies.service';
 import { PoliciesController } from './policies.controller';
 import { PolicyReminderService } from './policy-reminder.service';
-import { NotifierService } from '../notifications/notifier.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -26,9 +26,9 @@ import { UsersModule } from '../users/users.module';
     Application,
     Asset,
     SoftwareLicense,
-  ]), UsersModule],
+  ]), UsersModule, NotificationsModule],
   controllers: [PoliciesController],
-  providers: [PoliciesService, PolicyReminderService, NotifierService],
+  providers: [PoliciesService, PolicyReminderService],
   exports: [PoliciesService],
 })
 export class PoliciesModule {}

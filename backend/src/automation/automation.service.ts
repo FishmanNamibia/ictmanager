@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
+import { ApplicationsService } from '../applications/applications.service';
 import { ChangeRequest } from '../change-management/entities';
 import { ChangeManagementService } from '../change-management/change-management.service';
 import { SeverityLevel, Vulnerability, VulnerabilityStatus } from '../cybersecurity/entities';
@@ -18,6 +19,7 @@ import {
   TicketStatus,
 } from '../service-desk/entities';
 import { ServiceDeskService } from '../service-desk/service-desk.service';
+import { StaffService } from '../staff/staff.service';
 import { TenantService } from '../tenant/tenant.service';
 import { VendorContract } from '../vendors-contracts/entities/vendor-contract.entity';
 import { VendorsContractsService } from '../vendors-contracts/vendors-contracts.service';
@@ -27,7 +29,8 @@ type AutomationRule =
   | 'contract_expiry'
   | 'license_compliance'
   | 'policy_overdue_review'
-  | 'vulnerability_change';
+  | 'vulnerability_change'
+  | 'application_resilience_gap';
 
 type AutomationTargetType = 'risk' | 'ticket' | 'finding' | 'change';
 
@@ -65,9 +68,14 @@ export type AutomationRunResult = {
   message?: string;
 };
 
-const AUTOMATION_REPORTER = 'automation@i-ictms.local';
-const CONTRACT_NOTICE_FALLBACK_DAYS = 90;
-const LICENSE_TICKET_WINDOW_DAYS = 30;
+const AUTOMATION_REPORTER =
+  process.env.AUTOMATION_REPORTER_EMAIL || 'automation@i-ictms.local';
+const CONTRACT_NOTICE_FALLBACK_DAYS = parseInt(
+  process.env.CONTRACT_NOTICE_DAYS || '90', 10,
+);
+const LICENSE_TICKET_WINDOW_DAYS = parseInt(
+  process.env.LICENSE_TICKET_WINDOW_DAYS || '30', 10,
+);
 
 @Injectable()
 export class AutomationService {
@@ -80,6 +88,7 @@ export class AutomationService {
     @InjectRepository(AutomationRun)
     private readonly runRepo: Repository<AutomationRun>,
     private readonly tenantService: TenantService,
+    private readonly applicationsService: ApplicationsService,
     private readonly vendorsContractsService: VendorsContractsService,
     private readonly licensesService: LicensesService,
     private readonly policiesService: PoliciesService,
@@ -87,6 +96,7 @@ export class AutomationService {
     private readonly riskComplianceService: RiskComplianceService,
     private readonly serviceDeskService: ServiceDeskService,
     private readonly changeManagementService: ChangeManagementService,
+    private readonly staffService: StaffService,
   ) {}
 
   @Cron('0 */30 * * * *')
@@ -149,6 +159,7 @@ export class AutomationService {
         license_compliance: 0,
         policy_overdue_review: 0,
         vulnerability_change: 0,
+        application_resilience_gap: 0,
       },
     };
   }
@@ -269,6 +280,7 @@ export class AutomationService {
         await this.processLicenseCompliance(currentTenantId, counters);
         await this.processPolicyOverdueReviews(currentTenantId, counters);
         await this.processSecurityVulnerabilities(currentTenantId, counters);
+        await this.processApplicationResilience(currentTenantId, counters);
       }
 
       const completedAt = new Date();
@@ -679,6 +691,77 @@ export class AutomationService {
         counters.errorCount += 1;
         this.logger.warn(
           `Vulnerability automation failed for tenant=${tenantId}, vulnerability=${vulnerability.id}: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
+    }
+  }
+
+  private async processApplicationResilience(tenantId: string, counters: RunCounters): Promise<void> {
+    const [overview, applications, assignments] = await Promise.all([
+      this.riskComplianceService.getDisasterRecoveryOverview(tenantId),
+      this.applicationsService.findAll(tenantId),
+      this.staffService.findAssignments(tenantId),
+    ]);
+    const assignmentMap = assignments.reduce((acc, assignment) => {
+      const key = assignment.systemId || assignment.systemName;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(assignment);
+      return acc;
+    }, {} as Record<string, typeof assignments>);
+
+    for (const item of overview.items.filter((entry) => entry.status === 'attention_needed')) {
+      counters.processedCount += 1;
+      counters.ruleHits.application_resilience_gap += 1;
+
+      try {
+        const app = applications.find((candidate) => candidate.id === item.applicationId);
+        const systemAssignments = assignmentMap[item.applicationId] || assignmentMap[item.applicationName] || [];
+        const owner = item.owner || app?.ictOwner || app?.systemOwner || null;
+        const manualCoverage =
+          systemAssignments.length > 0 && systemAssignments.every((assignment) => assignment.coverage !== 'both');
+        const correctiveAction = [
+          'Update the recovery plan and define an alternate site.',
+          'Assign backup coverage for the system.',
+          item.dependencyCount > 0 ? 'Reduce manual dependency handoffs between integrated systems.' : null,
+          manualCoverage ? 'Expand support coverage beyond a single shift where possible.' : null,
+        ]
+          .filter(Boolean)
+          .join(' ');
+        const linkKey: LinkKey = {
+          automationType: 'application_resilience_gap',
+          sourceType: 'application',
+          sourceId: item.applicationId,
+        };
+
+        const outcome = await this.ensureFindingRecord(
+          tenantId,
+          linkKey,
+          {
+            title: `Disaster recovery gap: ${item.applicationName}`,
+            description: item.issues.join('. '),
+            source: 'business-continuity',
+            severity: item.severity,
+            status: 'open',
+            owner,
+            dueDate: this.addDays(new Date(), item.severity === 'high' ? 14 : 30),
+            correctiveAction,
+          },
+          {
+            title: `Disaster recovery gap: ${item.applicationName}`,
+            description: item.issues.join('. '),
+            source: 'business-continuity',
+            severity: item.severity,
+            owner,
+            dueDate: this.addDays(new Date(), item.severity === 'high' ? 14 : 30),
+            correctiveAction,
+          },
+          `DR resilience gap for ${item.applicationName}`,
+        );
+        this.applyOutcome(counters, outcome);
+      } catch (error: unknown) {
+        counters.errorCount += 1;
+        this.logger.warn(
+          `Resilience automation failed for tenant=${tenantId}, application=${item.applicationId}: ${error instanceof Error ? error.message : 'unknown error'}`,
         );
       }
     }

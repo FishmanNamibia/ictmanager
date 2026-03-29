@@ -2,6 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from './tenant.entity';
+import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import {
+  normalizeTenantSettings,
+  serializeTenantSettings,
+  TenantExperienceSettings,
+} from './tenant-settings';
 
 @Injectable()
 export class TenantService {
@@ -35,8 +41,83 @@ export class TenantService {
     });
   }
 
+  async findSingleActive(): Promise<Tenant | null> {
+    const tenants = await this.findAllActive();
+    return tenants.length === 1 ? tenants[0] : null;
+  }
+
   async create(data: { slug: string; name: string; logoUrl?: string }): Promise<Tenant> {
     const tenant = this.repo.create(data);
     return this.repo.save(tenant);
+  }
+
+  async getExperienceSettings(tenantId: string): Promise<TenantExperienceSettings> {
+    const tenant = await this.findById(tenantId);
+    return normalizeTenantSettings(tenant);
+  }
+
+  async getPublicBrandingBySlug(slug: string) {
+    const tenant = await this.findBySlug(slug);
+    const settings = normalizeTenantSettings(tenant);
+    return {
+      tenantId: settings.tenantId,
+      tenantSlug: settings.tenantSlug,
+      branding: settings.branding,
+      theme: settings.theme,
+    };
+  }
+
+  async getDefaultPublicBranding() {
+    const singleTenant = await this.findSingleActive();
+    const tenant = singleTenant ?? (await this.findAllActive())[0];
+    if (!tenant) throw new NotFoundException('Tenant not found');
+    const settings = normalizeTenantSettings(tenant);
+    return {
+      tenantId: settings.tenantId,
+      tenantSlug: settings.tenantSlug,
+      branding: settings.branding,
+      theme: settings.theme,
+    };
+  }
+
+  async updateExperienceSettings(
+    tenantId: string,
+    dto: UpdateTenantSettingsDto,
+  ): Promise<TenantExperienceSettings> {
+    const tenant = await this.findById(tenantId);
+    const current = normalizeTenantSettings(tenant);
+
+    const next: TenantExperienceSettings = {
+      ...current,
+      branding: {
+        ...current.branding,
+        ...dto.branding,
+      },
+      theme: {
+        ...current.theme,
+        ...dto.theme,
+      },
+      modules: {
+        enabled: dto.modules?.enabled ?? current.modules.enabled,
+      },
+      access: {
+        roleModules: {
+          ...current.access.roleModules,
+          ...(dto.access?.roleModules ?? {}),
+        } as TenantExperienceSettings['access']['roleModules'],
+      },
+    };
+
+    tenant.name = next.branding.organizationName;
+    tenant.logoUrl = next.branding.logoUrl || null;
+    const existingSettings =
+      tenant.settings && typeof tenant.settings === 'object' ? tenant.settings : {};
+    tenant.settings = {
+      ...existingSettings,
+      ...serializeTenantSettings(next),
+    };
+
+    const saved = await this.repo.save(tenant);
+    return normalizeTenantSettings(saved);
   }
 }

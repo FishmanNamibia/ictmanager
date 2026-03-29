@@ -3,9 +3,12 @@ import { AssetsService } from './assets.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
 import { CreateLicenseDto } from './dto/create-license.dto';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('licenses')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('licenses')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class LicensesController {
   constructor(private readonly assetsService: AssetsService) {}
 

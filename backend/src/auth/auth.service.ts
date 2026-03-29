@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { TenantService } from '../tenant/tenant.service';
 import { User } from '../users/user.entity';
@@ -37,14 +38,42 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly tenantService: TenantService,
     private readonly jwtService: JwtService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
-  async login(tenantSlug: string, email: string, password: string): Promise<AuthResult> {
-    const tenant = await this.tenantService.findBySlug(tenantSlug);
+  private async resolveTenantForLogin(tenantSlug: string | undefined, email: string) {
+    const normalizedSlug = tenantSlug?.trim();
+    if (normalizedSlug) {
+      return this.tenantService.findBySlug(normalizedSlug);
+    }
+
+    const singleTenant = await this.tenantService.findSingleActive();
+    if (singleTenant) {
+      return singleTenant;
+    }
+
+    const matchingUsers = (await this.usersService.findActiveByEmail(email))
+      .filter((user) => user.tenant?.active);
+
+    if (matchingUsers.length === 0) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const uniqueTenantIds = Array.from(new Set(matchingUsers.map((user) => user.tenantId)));
+    if (uniqueTenantIds.length === 1 && matchingUsers[0].tenant) {
+      return matchingUsers[0].tenant;
+    }
+
+    throw new UnauthorizedException('Tenant selection is required for this account');
+  }
+
+  async login(tenantSlug: string | undefined, email: string, password: string): Promise<AuthResult> {
+    const tenant = await this.resolveTenantForLogin(tenantSlug, email);
     const user = await this.usersService.findByEmail(tenant.id, email);
     if (!user || !user.active) throw new UnauthorizedException('Invalid credentials');
     const valid = await this.usersService.validatePassword(user, password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
+    await this.notificationsService.ensureWelcomeNotification(user);
     return this.issueToken(user);
   }
 

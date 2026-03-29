@@ -15,18 +15,31 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new QueryFailedExceptionFilter());
+  const configuredOrigins = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowedOrigins = new Set([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    ...configuredOrigins,
+  ]);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean) ?? [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS origin not allowed: ${origin}`), false);
+    },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
     optionsSuccessStatus: 204,
   });
   const port = process.env.PORT ?? 3001;
-  await app.listen(port);
-  console.log(`I-ICTMS API running at http://localhost:${port}/api`);
+  const host = process.env.HOST ?? '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`I-ICTMS API running at http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/api`);
 }
 bootstrap();

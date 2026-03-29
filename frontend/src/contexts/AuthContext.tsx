@@ -11,7 +11,7 @@ import {
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (tenantSlug: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, tenantSlug?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -36,23 +36,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const loadStored = useCallback(() => {
-    if (typeof window === 'undefined') return;
+  const loadStored = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     const t = localStorage.getItem(TOKEN_KEY);
     const u = localStorage.getItem(USER_KEY);
-    if (t && u) {
-      setToken(t);
-      try {
-        setUser(JSON.parse(u));
-      } catch {
-        logout();
-      }
+
+    if (!t || !u) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    setToken(t);
+
+    try {
+      const parsedUser = JSON.parse(u) as AuthUser;
+      setUser(parsedUser);
+
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('Session check timed out')), 8000);
+      });
+
+      const result = await Promise.race([authApi.me(), timeout]);
+      setUser(result.user);
+      localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+    } catch {
+      logout();
+    } finally {
+      setLoading(false);
+    }
   }, [logout]);
 
   useEffect(() => {
-    loadStored();
+    void loadStored();
   }, [loadStored]);
 
   useEffect(() => {
@@ -69,8 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [logout]);
 
-  const login = useCallback(async (tenantSlug: string, email: string, password: string) => {
-    const { accessToken, user: u } = await authApi.login(tenantSlug, email, password);
+  const login = useCallback(async (email: string, password: string, tenantSlug?: string) => {
+    const { accessToken, user: u } = await authApi.login(email, password, tenantSlug);
     localStorage.setItem(TOKEN_KEY, accessToken);
     localStorage.setItem(USER_KEY, JSON.stringify(u));
     setToken(accessToken);

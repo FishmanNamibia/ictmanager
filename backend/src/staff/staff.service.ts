@@ -181,6 +181,13 @@ export class StaffService {
     });
   }
 
+  async findAssignments(tenantId: string): Promise<SystemAssignment[]> {
+    return this.assignRepo.find({
+      where: { tenantId },
+      order: { systemName: 'ASC', role: 'ASC' },
+    });
+  }
+
   async removeAssignment(tenantId: string, staffProfileId: string, assignId: string): Promise<void> {
     await this.assignRepo.delete({ id: assignId, tenantId, staffProfileId });
   }

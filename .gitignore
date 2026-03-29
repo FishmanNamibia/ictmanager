@@ -41,5 +41,9 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/playwright/.auth/
 
+# Local dev logs and tools
+.run-logs/
+.tools/
+
 # Misc
 *.local

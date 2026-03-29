@@ -1,372 +1,647 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
-  Chip,
+  CircularProgress,
+  Container,
   Grid,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
+  Paper,
+  IconButton,
+  Tooltip,
+  Chip,
+  Divider,
+  Stack,
+  LinearProgress,
 } from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { api } from '@/lib/api';
+import Download from '@mui/icons-material/Download';
+import Refresh from '@mui/icons-material/Refresh';
+import TrendingUp from '@mui/icons-material/TrendingUp';
+import Security from '@mui/icons-material/Security';
+import Computer from '@mui/icons-material/Computer';
+import Assessment from '@mui/icons-material/Assessment';
+import Warning from '@mui/icons-material/Warning';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import Info from '@mui/icons-material/Info';
+import Timeline from '@mui/icons-material/Timeline';
+import PieChart from '@mui/icons-material/PieChart';
+import BarChart from '@mui/icons-material/BarChart';
+import AssessmentOutlined from '@mui/icons-material/AssessmentOutlined';
+import Shield from '@mui/icons-material/Shield';
+import Storage from '@mui/icons-material/Storage';
+import Business from '@mui/icons-material/Business';
+import People from '@mui/icons-material/People';
+import Assignment from '@mui/icons-material/Assignment';
+import CloudDownload from '@mui/icons-material/CloudDownload';
+import {
+  LineChart,
+  Line,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Area,
+  AreaChart,
+} from 'recharts';
 
-type ExecutiveData = {
-  ictPerformanceScore?: number;
-  riskExposure?: { licenseCompliance: string; expiringLicenses: number };
-  strategicAlignment?: { totalSystems: number; criticalSystems: number };
-  summary?: { totalAssets: number; licenseIssues: number; criticalSystems: number; staffCount: number };
-};
+const getChartColors = (theme: any) => [
+  theme.palette.primary.main,
+  theme.palette.success.main,
+  theme.palette.warning.main,
+  theme.palette.error.main,
+  '#7b1fa2',
+  '#00796b',
+  '#c62828',
+  '#0288d1',
+];
 
-type GovernanceStats = {
-  total: number;
-  overdueForReview: number;
-  approved: number;
-};
-
-type PolicyComplianceStats = {
-  overallCompliancePercent: number;
-  byPolicy: Array<{ policyId: string; compliancePercent: number }>;
-};
-
-type CyberDashboardStats = {
-  incidentStats: {
-    total: number;
-    activeIncidents: number;
+interface ExecutiveData {
+  headline: {
+    posture: 'stable' | 'watch' | 'critical';
+    ictPerformanceScore: number;
+    summary: string;
   };
-  riskStats: {
-    total: number;
-    criticalCount: number;
+  executiveSummary: {
+    overallInstitutionalIctPosture: string;
+    keyAchievementsThisPeriod: string[];
+    topRisksAndWatchItems: string[];
+    majorDecisionsRequiredFromManagement: string[];
+    urgentManagementActions: string[];
   };
-  vulnerabilityStats: {
-    total: number;
-    unpatchedCount: number;
-    overduePatchCount: number;
-  };
-  accessReviewStats: {
-    total: number;
-    overdueCount: number;
-    nextDueInDays: number | null;
-  };
-};
-
-type ServiceDeskStats = {
-  totalTickets: number;
-  openTickets: number;
-  averageResolutionTime: number;
-  overdueTickets: number;
-};
-
-type DataGovernanceStats = {
-  totalAssets: number;
-  processingRecords: number;
-  qualityMetrics: number;
-  pendingDPIA: number;
-  lowQualityAssets: number;
-};
-
-type AuditEvidence = {
-  id: string;
-  auditType: string;
-  actionBy?: string | null;
-  resource?: string | null;
-  success: boolean;
-  createdAt: string;
-};
-
-type ExecutiveState = {
-  core: ExecutiveData;
-  governance: GovernanceStats | null;
-  policyCompliance: PolicyComplianceStats | null;
-  cybersecurity: CyberDashboardStats | null;
-  serviceDesk: ServiceDeskStats | null;
-  dataGovernance: DataGovernanceStats | null;
-  auditEvidence: AuditEvidence[];
-};
-
-function KpiCard({
-  label,
-  value,
-  subtitle,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  subtitle?: string;
-  color?: string;
-}) {
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="overline" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="h4" fontWeight={700} sx={color ? { color } : undefined}>
-          {value}
-        </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="text.secondary">
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
+  sections: Array<{
+    title: string;
+    summary: string;
+    keyMetrics: Array<{
+      label: string;
+      value: string | number;
+      status: 'good' | 'warning' | 'critical';
+    }>;
+    keyRisks: string[];
+    recommendations: string[];
+    boardAttentionLevel: 'low' | 'medium' | 'high' | 'critical';
+    dataConfidence: {
+      level: 'high' | 'moderate' | 'low';
+      narrative: string;
+    };
+  }>;
+  topRisks: string[];
+  watchItems: string[];
+  decisionsRequired: string[];
+  recommendations: string[];
+  managementActionRegister: Array<{
+    issue: string;
+    explanation: string;
+    businessImpact: string;
+    recommendedAction: string;
+    owner: string;
+    dueDate: string;
+    priority: string;
+    status: string;
+    escalationRequired: boolean;
+  }>;
+  generatedAt: string;
 }
 
-export default function ExecutivePage() {
-  const [data, setData] = useState<ExecutiveState | null>(null);
+const getApiBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:3001/api`;
+  }
+  return 'http://localhost:3001/api';
+};
+
+export default function ExecutiveDashboard() {
+  const theme = useTheme();
+  const [data, setData] = useState<ExecutiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('iictms_token');
+      const response = await fetch(`${getApiBaseUrl()}/dashboards/executive/report`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch executive data');
+      }
+
+      const result = await response.json();
+      setData(result);
+      setLastRefresh(new Date());
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load executive data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (typeof window === 'undefined') return;
+    setDownloadingPdf(true);
+    try {
+      const token = localStorage.getItem('iictms_token');
+      const response = await fetch(`${getApiBaseUrl()}/dashboards/executive/report.pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        let detail = 'Failed to generate PDF report';
+        try {
+          const errJson = await response.json();
+          detail = errJson.detail || errJson.message || detail;
+        } catch {}
+        throw new Error(detail);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `executive-board-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message || 'Failed to generate PDF report');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    setError(null);
-
-    (async () => {
-      try {
-        const core = await api<ExecutiveData>('/dashboards/executive');
-        const [governance, policyCompliance, cybersecurity, serviceDesk, dataGovernance, auditEvidence] = await Promise.all([
-          api<GovernanceStats>('/policies/governance-stats').catch(() => null),
-          api<PolicyComplianceStats>('/policies/compliance/stats').catch(() => null),
-          api<CyberDashboardStats>('/cybersecurity/dashboard/stats').catch(() => null),
-          api<ServiceDeskStats>('/service-desk/dashboard-stats').catch(() => null),
-          api<DataGovernanceStats>('/data-governance/dashboard-stats').catch(() => null),
-          api<AuditEvidence[]>('/cybersecurity/audit-evidence?days=30').catch(() => []),
-        ]);
-
-        if (!mounted) return;
-        setData({
-          core,
-          governance,
-          policyCompliance,
-          cybersecurity,
-          serviceDesk,
-          dataGovernance,
-          auditEvidence,
-        });
-      } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : 'Failed to load executive dashboard');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    fetchData();
   }, []);
 
-  const score = data?.core.ictPerformanceScore ?? 0;
-  const scoreColor = score >= 70 ? 'success.main' : score >= 40 ? 'warning.main' : 'error.main';
-  const risk = data?.core.riskExposure ?? { licenseCompliance: 'ok', expiringLicenses: 0 };
-  const alignment = data?.core.strategicAlignment ?? { totalSystems: 0, criticalSystems: 0 };
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'good':
+      case 'stable':
+      case 'low':
+        return theme.palette.success.main;
+      case 'warning':
+      case 'watch':
+      case 'medium':
+        return theme.palette.warning.main;
+      case 'critical':
+      case 'high':
+        return theme.palette.error.main;
+      default:
+        return theme.palette.text.secondary;
+    }
+  };
 
-  const compliancePercent = data?.policyCompliance?.overallCompliancePercent ?? 0;
-  const overduePolicies = data?.governance?.overdueForReview ?? 0;
-  const openTickets = data?.serviceDesk?.openTickets ?? 0;
-  const overdueTickets = data?.serviceDesk?.overdueTickets ?? 0;
-  const activeIncidents = data?.cybersecurity?.incidentStats.activeIncidents ?? 0;
-  const criticalRisks = data?.cybersecurity?.riskStats.criticalCount ?? 0;
-  const unpatched = data?.cybersecurity?.vulnerabilityStats.unpatchedCount ?? 0;
-  const overdueReviews = data?.cybersecurity?.accessReviewStats.overdueCount ?? 0;
-  const totalDataAssets = data?.dataGovernance?.totalAssets ?? 0;
-  const lowQualityAssets = data?.dataGovernance?.lowQualityAssets ?? 0;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'good':
+      case 'stable':
+      case 'low':
+        return <CheckCircle color="success" />;
+      case 'warning':
+      case 'watch':
+      case 'medium':
+        return <Warning color="warning" />;
+      case 'critical':
+      case 'high':
+        return <ErrorIcon color="error" />;
+      default:
+        return <Info color="info" />;
+    }
+  };
 
-  const evidencePreview = useMemo(() => (data?.auditEvidence ?? []).slice(0, 8), [data?.auditEvidence]);
+  const getPostureData = () => {
+    if (!data) return [];
+    
+    return [
+      {
+        name: 'ICT Performance',
+        value: data.headline.ictPerformanceScore,
+        max: 100,
+        status: data.headline.ictPerformanceScore >= 75 ? 'good' : data.headline.ictPerformanceScore >= 50 ? 'warning' : 'critical',
+      },
+      {
+        name: 'Risk Management',
+        value: Math.max(0, 100 - (data.topRisks.length * 15)),
+        max: 100,
+        status: data.topRisks.length === 0 ? 'good' : data.topRisks.length <= 3 ? 'warning' : 'critical',
+      },
+      {
+        name: 'Data Confidence',
+        value: Math.max(0, 100 - (data.sections.filter(s => s.dataConfidence.level === 'low').length * 25)),
+        max: 100,
+        status: data.sections.filter(s => s.dataConfidence.level === 'low').length === 0 ? 'good' : 'warning',
+      },
+      {
+        name: 'Action Items',
+        value: Math.max(0, 100 - (data.managementActionRegister.length * 10)),
+        max: 100,
+        status: data.managementActionRegister.length <= 5 ? 'good' : data.managementActionRegister.length <= 10 ? 'warning' : 'critical',
+      },
+    ];
+  };
+
+  const getRiskDistributionData = () => {
+    if (!data) return [];
+    
+    return [
+      { name: 'Critical', value: data.sections.filter(s => s.boardAttentionLevel === 'critical').length, color: theme.palette.error.main },
+      { name: 'High', value: data.sections.filter(s => s.boardAttentionLevel === 'high').length, color: theme.palette.warning.main },
+      { name: 'Medium', value: data.sections.filter(s => s.boardAttentionLevel === 'medium').length, color: theme.palette.info.main },
+      { name: 'Low', value: data.sections.filter(s => s.boardAttentionLevel === 'low').length, color: theme.palette.success.main },
+    ].filter(item => item.value > 0);
+  };
+
+  const getSectionMetricsData = () => {
+    if (!data) return [];
+    
+    return data.sections.map(section => ({
+      name: section.title.substring(0, 20),
+      critical: section.keyMetrics.filter(m => m.status === 'critical').length,
+      warning: section.keyMetrics.filter(m => m.status === 'warning').length,
+      good: section.keyMetrics.filter(m => m.status === 'good').length,
+    }));
+  };
+
+  const getActionPriorityData = () => {
+    if (!data) return [];
+    
+    return [
+      { name: 'Critical', value: data.managementActionRegister.filter(a => a.priority === 'critical').length },
+      { name: 'High', value: data.managementActionRegister.filter(a => a.priority === 'high').length },
+      { name: 'Medium', value: data.managementActionRegister.filter(a => a.priority === 'medium').length },
+      { name: 'Low', value: data.managementActionRegister.filter(a => a.priority === 'low').length },
+    ].filter(item => item.value > 0);
+  };
 
   if (loading) {
     return (
-      <Box>
-        <Typography variant="h5" fontWeight={700} gutterBottom>
-          Executive ICT scorecard
-        </Typography>
-        <Grid container spacing={2}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid item xs={12} sm={6} md={4} key={i}>
-              <Card>
-                <CardContent>
-                  <Skeleton height={110} />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Skeleton height={260} />
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
     );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={fetchData} startIcon={<Refresh />}>
+          Retry
+        </Button>
+      </Container>
+    );
+  }
+
+  if (!data) {
+    return null;
   }
 
   return (
-    <Box>
-      <Box display="flex" alignItems="center" gap={1} mb={2}>
-        <TrendingUpIcon color="primary" />
-        <Typography variant="h5" fontWeight={700}>
-          Executive ICT scorecard
-        </Typography>
-      </Box>
-
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Consolidated view of ICT performance, compliance posture, cyber risk, and operational health.
-      </Typography>
-
-      <Grid container spacing={2} mb={2}>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard label="ICT Performance Score" value={score} subtitle="Out of 100" color={scoreColor} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            label="Policy Compliance"
-            value={`${compliancePercent}%`}
-            subtitle={`${overduePolicies} overdue policy reviews`}
-            color={compliancePercent >= 80 ? 'success.main' : compliancePercent >= 60 ? 'warning.main' : 'error.main'}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            label="Security Posture"
-            value={activeIncidents}
-            subtitle={`${criticalRisks} critical risks | ${unpatched} unpatched vulns`}
-            color={activeIncidents > 0 || criticalRisks > 0 ? 'error.main' : 'success.main'}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            label="Service Desk"
-            value={openTickets}
-            subtitle={`${overdueTickets} overdue tickets`}
-            color={overdueTickets > 0 ? 'warning.main' : 'success.main'}
-          />
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2} mb={2}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Risk and compliance signals
-              </Typography>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                {risk.licenseCompliance === 'warning' ? (
-                  <WarningIcon color="warning" />
-                ) : (
-                  <CheckCircleIcon color="success" />
-                )}
-                <Typography variant="body2">
-                  License compliance: {risk.licenseCompliance === 'warning' ? 'Attention' : 'OK'}
-                </Typography>
-              </Box>
-              <Box display="flex" gap={1} flexWrap="wrap">
-                <Chip
-                  size="small"
-                  label={`Expiring licenses: ${risk.expiringLicenses}`}
-                  color={risk.expiringLicenses > 0 ? 'warning' : 'success'}
-                />
-                <Chip
-                  size="small"
-                  label={`Overdue access reviews: ${overdueReviews}`}
-                  color={overdueReviews > 0 ? 'error' : 'success'}
-                />
-                <Chip
-                  size="small"
-                  label={`Total policies: ${data?.governance?.total ?? 0}`}
-                  variant="outlined"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Strategic and data alignment
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total systems: {alignment.totalSystems}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Critical systems: {alignment.criticalSystems}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Data assets: {totalDataAssets}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Low-quality assets: {lowQualityAssets}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      <Card>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="h6">Audit evidence (last 30 days)</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Records: {data?.auditEvidence.length ?? 0}
-            </Typography>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {/* Header */}
+      <Paper sx={{ p: 3, mb: 3, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            Executive Dashboard
+          </Typography>
+          <Box display="flex" gap={2}>
+            <Tooltip title="Refresh Data">
+              <IconButton color="inherit" onClick={fetchData}>
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={downloadPdf}
+              disabled={downloadingPdf}
+              startIcon={downloadingPdf ? <CircularProgress size={20} color="inherit" /> : <Download />}
+            >
+              {downloadingPdf ? 'Generating...' : 'Download PDF'}
+            </Button>
           </Box>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'grey.50' } }}>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Actor</TableCell>
-                  <TableCell>Resource</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {evidencePreview.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No audit evidence records found for the selected period.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  evidencePreview.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
-                      <TableCell>{row.auditType.replace(/_/g, ' ')}</TableCell>
-                      <TableCell>{row.actionBy || '-'}</TableCell>
-                      <TableCell>{row.resource || '-'}</TableCell>
-                      <TableCell>
-                        <Chip size="small" label={row.success ? 'success' : 'failed'} color={row.success ? 'success' : 'error'} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        </Box>
+        <Typography variant="subtitle1" mb={2}>
+          Comprehensive ICT performance and risk overview for executive leadership
+        </Typography>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Chip
+            icon={getStatusIcon(data.headline.posture)}
+            label={`Overall Status: ${data.headline.posture.toUpperCase()}`}
+            sx={{
+              backgroundColor: getStatusColor(data.headline.posture),
+              color: 'white',
+              fontWeight: 'bold',
+            }}
+          />
+          <Typography variant="caption">
+            Last updated: {lastRefresh.toLocaleString()}
+          </Typography>
+        </Box>
+      </Paper>
+
+      {/* Key Metrics Overview */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%', borderLeft: '4px solid', borderLeftColor: getStatusColor(data.headline.posture) }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="h6" component="div">
+                  ICT Score
+                </Typography>
+                {getStatusIcon(data.headline.posture)}
+              </Box>
+              <Typography variant="h3" component="div" fontWeight="bold" color={getStatusColor(data.headline.posture)}>
+                {data.headline.ictPerformanceScore}/100
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Overall Performance
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%', borderLeft: '4px solid', borderLeftColor: theme.palette.error.main }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="h6" component="div">
+                  Top Risks
+                </Typography>
+                <ErrorIcon color="error" />
+              </Box>
+              <Typography variant="h3" component="div" fontWeight="bold" color={theme.palette.error.main}>
+                {data.topRisks.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Requiring Attention
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%', borderLeft: '4px solid', borderLeftColor: theme.palette.warning.main }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="h6" component="div">
+                  Watch Items
+                </Typography>
+                <Warning color="warning" />
+              </Box>
+              <Typography variant="h3" component="div" fontWeight="bold" color={theme.palette.warning.main}>
+                {data.watchItems.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Under Monitoring
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ height: '100%', borderLeft: '4px solid', borderLeftColor: theme.palette.info.main }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="h6" component="div">
+                  Actions
+                </Typography>
+                <Assignment color="info" />
+              </Box>
+              <Typography variant="h3" component="div" fontWeight="bold" color={theme.palette.info.main}>
+                {data.managementActionRegister.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Management Required
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Charts Row 1 */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Performance Overview
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={getPostureData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Bar dataKey="value" fill={theme.palette.primary.main} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Risk Distribution
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={getRiskDistributionData()}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {getRiskDistributionData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Executive Summary */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Executive Summary
+          </Typography>
+          <Typography variant="body1" paragraph>
+            {data.headline.summary}
+          </Typography>
+          <Divider sx={{ my: 2 }} />
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" color="primary" gutterBottom>
+                Key Achievements
+              </Typography>
+              {data.executiveSummary.keyAchievementsThisPeriod.length > 0 ? (
+                data.executiveSummary.keyAchievementsThisPeriod.map((achievement, index) => (
+                  <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                    • {achievement}
+                  </Typography>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No major achievements recorded this period.
+                </Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" color="error" gutterBottom>
+                Top Risks & Watch Items
+              </Typography>
+              {data.executiveSummary.topRisksAndWatchItems.length > 0 ? (
+                data.executiveSummary.topRisksAndWatchItems.slice(0, 5).map((item, index) => (
+                  <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                    • {item}
+                  </Typography>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No critical risks identified.
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
         </CardContent>
       </Card>
-    </Box>
+
+      {/* Section Analysis */}
+      <Typography variant="h5" gutterBottom>
+        Domain Analysis
+      </Typography>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {data.sections.map((section, index) => (
+          <Grid item xs={12} md={6} key={index}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                  <Typography variant="h6" component="div">
+                    {section.title}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={section.boardAttentionLevel.toUpperCase()}
+                    sx={{
+                      backgroundColor: getStatusColor(section.boardAttentionLevel),
+                      color: 'white',
+                    }}
+                  />
+                </Box>
+                <Typography variant="body2" paragraph>
+                  {section.summary}
+                </Typography>
+                {section.keyRisks && section.keyRisks.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="error" gutterBottom>
+                      Key Risks
+                    </Typography>
+                    {section.keyRisks.slice(0, 2).map((risk, riskIndex) => (
+                      <Typography key={riskIndex} variant="body2" sx={{ mb: 0.5 }}>
+                        • {risk}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                {section.recommendations && section.recommendations.length > 0 && (
+                  <Box>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                      Recommendations
+                    </Typography>
+                    {section.recommendations.slice(0, 2).map((rec, recIndex) => (
+                      <Typography key={recIndex} variant="body2" sx={{ mb: 0.5 }}>
+                        • {rec}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Action Items */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Management Action Register
+          </Typography>
+          {data.managementActionRegister.length > 0 ? (
+            <Grid container spacing={2}>
+              {data.managementActionRegister.slice(0, 6).map((action, index) => (
+                <Grid item xs={12} md={6} key={index}>
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
+                      <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                        {action.issue}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={action.priority.toUpperCase()}
+                        sx={{
+                          backgroundColor: getStatusColor(action.priority),
+                          color: 'white',
+                          ml: 1,
+                        }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {action.recommendedAction}
+                    </Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="caption" color="text.secondary">
+                        Owner: {action.owner}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Due: {action.dueDate}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No urgent management actions required at this time.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+    </Container>
   );
 }

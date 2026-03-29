@@ -3,9 +3,12 @@ import { StaffService } from './staff.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../tenant/decorators/tenant-id.decorator';
 import { AddSkillDto } from './dto/add-skill.dto';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('staff/:staffProfileId/skills')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('staff')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class SkillsController {
   constructor(private readonly staffService: StaffService) {}
 

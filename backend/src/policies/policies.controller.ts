@@ -9,9 +9,12 @@ import { Role } from '../common/roles';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { UpdatePolicyDto } from './dto/update-policy.dto';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('policies')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('policies')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class PoliciesController {
   constructor(private readonly policiesService: PoliciesService) {}
 

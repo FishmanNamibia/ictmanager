@@ -7,9 +7,12 @@ import { UpdateStaffProfileDto } from './dto/update-staff-profile.dto';
 import { AddSkillDto } from './dto/add-skill.dto';
 import { AddCertificationDto } from './dto/add-certification.dto';
 import { AddAssignmentDto } from './dto/add-assignment.dto';
+import { ModuleAccess } from '../tenant/decorators/module-access.decorator';
+import { ModuleAccessGuard } from '../tenant/guards/module-access.guard';
 
 @Controller('staff')
-@UseGuards(JwtAuthGuard)
+@ModuleAccess('staff')
+@UseGuards(JwtAuthGuard, ModuleAccessGuard)
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 
