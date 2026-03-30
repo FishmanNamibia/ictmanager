@@ -39,6 +39,7 @@ import {
   Storage as DataGovernanceIcon,
   Support as ServiceDeskIcon,
   TrendingUp as ExecutiveIcon,
+  ManageAccounts as ManageAccountsIcon,
   Logout as LogoutIcon,
   Search as SearchIcon,
   Notifications as NotificationsIcon,
@@ -57,7 +58,9 @@ import { useThemeMode } from '@/contexts/ThemeModeContext';
 const DRAWER_WIDTH = 260;
 const HEADER_HEIGHT = 64;
 
-const navItems: { id: AppModuleId; path: string; label: string; icon: React.ReactNode; roles?: string[] }[] = [
+type NavItem = { id: AppModuleId; path: string; label: string; icon: React.ReactNode; roles?: string[] };
+
+const moduleItems: NavItem[] = [
   { id: 'dashboard', path: '/dashboard', label: 'My Desk', icon: <DashboardIcon /> },
   { id: 'assets', path: '/assets', label: 'Assets', icon: <AssetIcon /> },
   { id: 'licenses', path: '/licenses', label: 'Licenses', icon: <LicenseIcon /> },
@@ -72,8 +75,14 @@ const navItems: { id: AppModuleId; path: string; label: string; icon: React.Reac
   { id: 'data-governance', path: '/data-governance', label: 'Data Governance', icon: <DataGovernanceIcon /> },
   { id: 'service-desk', path: '/service-desk', label: 'Service Desk', icon: <ServiceDeskIcon /> },
   { id: 'executive', path: '/executive', label: 'Executive View', icon: <ExecutiveIcon /> },
+];
+
+const adminItems: NavItem[] = [
+  { id: 'user-accounts', path: '/user-accounts', label: 'User accounts', icon: <ManageAccountsIcon />, roles: ['ict_manager'] },
   { id: 'settings', path: '/settings', label: 'Settings', icon: <SettingsIcon />, roles: ['ict_manager'] },
 ];
+
+const navItems = [...moduleItems, ...adminItems];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -486,37 +495,73 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }}
       >
         <Toolbar />
-        <Box sx={{ overflow: 'auto', py: 2 }}>
-          <Typography
-            variant="overline"
-            sx={{ px: 2, color: 'secondary.main', fontWeight: 700, letterSpacing: 1 }}
-          >
-            Modules
-          </Typography>
-          <List dense sx={{ pt: 1 }}>
-            {navItems.filter(canSee).map((item) => (
-              <ListItemButton
-                key={item.path}
-                component={Link}
-                href={item.path}
-                onClick={() => setNavigating(true)}
-                selected={pathname === item.path}
-                sx={{
-                  mx: 1,
-                  borderRadius: 1,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: '#fff',
-                    '& .MuiListItemIcon-root': { color: '#fff' },
-                    '&:hover': { bgcolor: 'primary.dark' },
-                  },
-                }}
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - ${HEADER_HEIGHT}px - 64px)` }}>
+          <Box sx={{ overflow: 'auto', flex: 1, py: 2 }}>
+            <Typography
+              variant="overline"
+              sx={{ px: 2, color: 'secondary.main', fontWeight: 700, letterSpacing: 1 }}
+            >
+              Modules
+            </Typography>
+            <List dense sx={{ pt: 1 }}>
+              {moduleItems.filter(canSee).map((item) => (
+                <ListItemButton
+                  key={item.path}
+                  component={Link}
+                  href={item.path}
+                  onClick={() => setNavigating(true)}
+                  selected={pathname === item.path}
+                  sx={{
+                    mx: 1,
+                    borderRadius: 1,
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: '#fff',
+                      '& .MuiListItemIcon-root': { color: '#fff' },
+                      '&:hover': { bgcolor: 'primary.dark' },
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Box>
+          {adminItems.filter(canSee).length > 0 && (
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 1 }}>
+              <Typography
+                variant="overline"
+                sx={{ px: 2, color: 'secondary.main', fontWeight: 700, letterSpacing: 1 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            ))}
-          </List>
+                Admin
+              </Typography>
+              <List dense sx={{ pt: 0.5 }}>
+                {adminItems.filter(canSee).map((item) => (
+                  <ListItemButton
+                    key={item.path}
+                    component={Link}
+                    href={item.path}
+                    onClick={() => setNavigating(true)}
+                    selected={pathname === item.path}
+                    sx={{
+                      mx: 1,
+                      borderRadius: 1,
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        color: '#fff',
+                        '& .MuiListItemIcon-root': { color: '#fff' },
+                        '&:hover': { bgcolor: 'primary.dark' },
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Box>
+          )}
         </Box>
       </Drawer>
 

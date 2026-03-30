@@ -1,9 +1,27 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { Role } from '../common/roles';
+
+export type PublicUser = {
+  id: string;
+  tenantId: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  active: boolean;
+  department: string | null;
+  jobTitle: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Injectable()
 export class UsersService {
@@ -11,6 +29,21 @@ export class UsersService {
     @InjectRepository(User)
     private readonly repo: Repository<User>,
   ) {}
+
+  toPublic(user: User): PublicUser {
+    return {
+      id: user.id,
+      tenantId: user.tenantId,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role as Role,
+      active: user.active,
+      department: user.department,
+      jobTitle: user.jobTitle,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
 
   async create(data: {
     tenantId: string;
@@ -60,12 +93,68 @@ export class UsersService {
     return user;
   }
 
+  /** Tenant users for internal use (includes password hash — do not return raw from controllers). */
   async findAllByTenant(tenantId: string): Promise<User[]> {
     return this.repo.find({
       where: { tenantId },
       order: { fullName: 'ASC' },
-      relations: ['tenant'],
     });
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    dto: {
+      fullName?: string;
+      email?: string;
+      role?: Role;
+      active?: boolean;
+      department?: string;
+      jobTitle?: string;
+      password?: string;
+    },
+  ): Promise<PublicUser> {
+    const user = await this.findById(id, tenantId);
+    const nextRole = dto.role ?? (user.role as Role);
+    const nextActive = dto.active !== undefined ? dto.active : user.active;
+    const willBeActiveManager = nextRole === Role.ICT_MANAGER && nextActive;
+
+    if (!willBeActiveManager) {
+      const otherActiveManagers = await this.repo.count({
+        where: {
+          tenantId,
+          role: Role.ICT_MANAGER,
+          active: true,
+          id: Not(user.id),
+        },
+      });
+      if (otherActiveManagers < 1) {
+        throw new BadRequestException(
+          'Organisation must keep at least one active ICT Manager account.',
+        );
+      }
+    }
+
+    if (dto.email && dto.email.toLowerCase() !== user.email) {
+      const existing = await this.repo.findOne({
+        where: { tenantId, email: dto.email.toLowerCase() },
+      });
+      if (existing && existing.id !== user.id) {
+        throw new ConflictException('Another user already uses this email');
+      }
+      user.email = dto.email.toLowerCase();
+    }
+    if (dto.fullName !== undefined) user.fullName = dto.fullName.trim();
+    if (dto.role !== undefined) user.role = dto.role;
+    if (dto.active !== undefined) user.active = dto.active;
+    if (dto.department !== undefined) user.department = dto.department || null;
+    if (dto.jobTitle !== undefined) user.jobTitle = dto.jobTitle || null;
+    if (dto.password) {
+      user.passwordHash = await bcrypt.hash(dto.password, 12);
+    }
+
+    const saved = await this.repo.save(user);
+    return this.toPublic(saved);
   }
 
   async validatePassword(user: User, password: string): Promise<boolean> {

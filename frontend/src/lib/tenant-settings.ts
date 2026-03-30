@@ -13,6 +13,14 @@ export const APP_MODULES = [
   { id: 'data-governance', path: '/data-governance', label: 'Data Governance', description: 'Data stewardship and governance controls.', core: false },
   { id: 'service-desk', path: '/service-desk', label: 'Service Desk', description: 'Tickets, service levels, and support demand.', core: false },
   { id: 'executive', path: '/executive', label: 'Executive View', description: 'Board and EXCO reporting with executive summaries.', core: false },
+  {
+    id: 'user-accounts',
+    path: '/user-accounts',
+    label: 'User accounts',
+    description: 'Create login users for your organisation and assign application roles.',
+    core: true,
+    roles: ['ict_manager'],
+  },
   { id: 'settings', path: '/settings', label: 'Settings', description: 'Tenant branding, theme, and enabled module setup.', core: true, roles: ['ict_manager'] },
 ] as const;
 
@@ -165,7 +173,7 @@ export function canAccessModule(settings: TenantSettings, moduleId: AppModuleId,
   const module = APP_MODULES.find((item) => item.id === moduleId);
   if (!module || !role) return false;
   if (moduleId === 'dashboard') return true;
-  if (moduleId === 'settings') return role === 'ict_manager';
+  if (moduleId === 'settings' || moduleId === 'user-accounts') return role === 'ict_manager';
   if (!isModuleEnabled(settings, moduleId)) return false;
   const roleId = APP_ROLES.find((item) => item.id === role)?.id;
   if (!roleId) return false;

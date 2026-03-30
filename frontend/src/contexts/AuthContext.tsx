@@ -12,6 +12,7 @@ type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
   login: (email: string, password: string, tenantSlug?: string) => Promise<void>;
+  setSession: (accessToken: string, user: AuthUser) => void;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
@@ -96,12 +97,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }, []);
 
+  const setSession = useCallback((accessToken: string, u: AuthUser) => {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+    setToken(accessToken);
+    setUser(u);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
         login,
+        setSession,
         logout,
         loading,
         isAuthenticated: !!token && !!user,

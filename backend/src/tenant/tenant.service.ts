@@ -80,6 +80,30 @@ export class TenantService {
     };
   }
 
+  async updateTenantSettings(tenantId: string, settings: Partial<TenantExperienceSettings>): Promise<void> {
+    const tenant = await this.findById(tenantId);
+    tenant.settings = {
+      ...(tenant.settings && typeof tenant.settings === 'object' ? tenant.settings : {}),
+      ...serializeTenantSettings(settings as TenantExperienceSettings),
+    };
+    await this.repo.save(tenant);
+  }
+
+  async updateLogoUrl(tenantId: string, logoUrl: string): Promise<void> {
+    const tenant = await this.findById(tenantId);
+    tenant.logoUrl = logoUrl;
+    const existingSettings =
+      tenant.settings && typeof tenant.settings === 'object' ? tenant.settings : {};
+    tenant.settings = {
+      ...existingSettings,
+      branding: {
+        ...(existingSettings as Record<string, unknown>).branding as Record<string, unknown> ?? {},
+        logoUrl,
+      },
+    };
+    await this.repo.save(tenant);
+  }
+
   async updateExperienceSettings(
     tenantId: string,
     dto: UpdateTenantSettingsDto,

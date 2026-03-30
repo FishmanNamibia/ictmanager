@@ -16,8 +16,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenantSettings } from '@/contexts/TenantSettingsContext';
+import { apiUpload, getApiBaseUrl } from '@/lib/api';
 import { APP_MODULES, APP_ROLES, AppUserRole, OPTIONAL_APP_MODULES, TenantSettings } from '@/lib/tenant-settings';
 
 type SettingsFormState = {
@@ -201,14 +204,64 @@ export default function SettingsPage() {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField
-                    label="Logo URL"
-                    value={form.logoUrl}
-                    onChange={(event) => setField('logoUrl', event.target.value)}
-                    fullWidth
-                    disabled={!canManage}
-                    helperText="Use an internal or public image URL. Leave blank to use the default logo."
-                  />
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Organisation Logo</Typography>
+                  {form.logoUrl ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Box
+                        component="img"
+                        src={form.logoUrl.startsWith('/') ? `${getApiBaseUrl().replace('/api', '')}${form.logoUrl}` : form.logoUrl}
+                        alt="Logo preview"
+                        sx={{ maxHeight: 64, maxWidth: 200, objectFit: 'contain', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}
+                      />
+                      {canManage && (
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => setField('logoUrl', '')}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      No logo uploaded. Upload an image file (PNG, JPG, SVG — max 2 MB).
+                    </Typography>
+                  )}
+                  {canManage && (
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<CloudUploadIcon />}
+                      size="small"
+                    >
+                      Upload logo
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) {
+                            setError('Logo file must be under 2 MB');
+                            return;
+                          }
+                          try {
+                            const fd = new FormData();
+                            fd.append('logo', file);
+                            const result = await apiUpload<{ logoUrl: string }>('/tenants/logo', fd);
+                            setField('logoUrl', result.logoUrl);
+                            setNotice('Logo uploaded successfully.');
+                          } catch (uploadErr) {
+                            setError(uploadErr instanceof Error ? uploadErr.message : 'Logo upload failed');
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </Button>
+                  )}
                 </Grid>
                 <Grid item xs={12}>
                   <TextField

@@ -16,12 +16,13 @@ export const TENANT_MODULE_IDS = [
   'data-governance',
   'service-desk',
   'executive',
+  'user-accounts',
   'settings',
 ] as const;
 
 export type TenantModuleId = (typeof TENANT_MODULE_IDS)[number];
 
-export const CORE_TENANT_MODULE_IDS: TenantModuleId[] = ['dashboard', 'settings'];
+export const CORE_TENANT_MODULE_IDS: TenantModuleId[] = ['dashboard', 'user-accounts', 'settings'];
 export const OPTIONAL_TENANT_MODULE_IDS = TENANT_MODULE_IDS.filter(
   (id) => !CORE_TENANT_MODULE_IDS.includes(id),
 ) as TenantModuleId[];
@@ -172,7 +173,7 @@ export function canRoleAccessTenantModule(
   moduleId: TenantModuleId,
 ): boolean {
   if (moduleId === 'dashboard') return true;
-  if (moduleId === 'settings') return role === Role.ICT_MANAGER;
+  if (moduleId === 'settings' || moduleId === 'user-accounts') return role === Role.ICT_MANAGER;
   if (!settings.modules.enabled.includes(moduleId)) return false;
   const allowedModules = settings.access.roleModules[role] ?? DEFAULT_ROLE_MODULES[role] ?? [];
   return allowedModules.includes(moduleId);

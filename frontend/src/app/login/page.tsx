@@ -280,10 +280,20 @@ export default function LoginPage() {
               internal governance and security policies. All access is monitored and logged.
             </Typography>
             <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider', textAlign: 'center' }}
+            >
+              Don&apos;t have an account?{' '}
+              <MuiLink href="/register" underline="hover" fontWeight={600}>
+                Register your organisation
+              </MuiLink>
+            </Typography>
+            <Typography
               variant="caption"
               display="block"
               color="text.secondary"
-              sx={{ lineHeight: 1.5, mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider', textAlign: 'center' }}
+              sx={{ lineHeight: 1.5, mt: 1, textAlign: 'center' }}
             >
               <MuiLink
                 href="https://dynaverseinvestment.com"
@@ -292,7 +302,7 @@ export default function LoginPage() {
                 underline="hover"
                 color="inherit"
               >
-                dyanverse investment product
+                dynaverse investment product
               </MuiLink>
             </Typography>
           </CardContent>
