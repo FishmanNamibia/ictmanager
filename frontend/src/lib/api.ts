@@ -134,6 +134,11 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email, password, ...(tenantSlug ? { tenantSlug } : {}) }),
     }),
+  tenantsForEmail: (email: string) =>
+    api<{ slug: string; name: string }[]>('/auth/tenants-for-email', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
   me: () => api<{ user: AuthUser }>('/auth/me'),
 };
 

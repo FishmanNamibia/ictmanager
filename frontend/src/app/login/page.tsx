@@ -12,6 +12,7 @@ import {
   Typography,
   Alert,
   Grid,
+  MenuItem,
 } from '@mui/material';
 import {
   Computer as AssetIcon,
@@ -22,10 +23,11 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { getLoginPagePalette } from '@/theme';
-import { SESSION_EXPIRED_NOTICE_KEY, tenantApi } from '@/lib/api';
+import { SESSION_EXPIRED_NOTICE_KEY, authApi, tenantApi } from '@/lib/api';
 import { DEFAULT_TENANT_SETTINGS, normalizeTenantSettings, PublicTenantBranding } from '@/lib/tenant-settings';
 
 type FormData = { email: string; password: string };
+type TenantOption = { slug: string; name: string };
 
 const featureCards = [
   {
@@ -58,6 +60,8 @@ export default function LoginPage() {
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [branding, setBranding] = useState<PublicTenantBranding | null>(null);
+  const [tenantOptions, setTenantOptions] = useState<TenantOption[]>([]);
+  const [selectedSlug, setSelectedSlug] = useState('');
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
   const effectiveSettings = branding
     ? normalizeTenantSettings({
@@ -108,12 +112,34 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(data.email.trim(), data.password);
-      // Single navigation after login — AuthContext state update will also
-      // trigger the useEffect above, but router.replace is idempotent.
+      const slug = selectedSlug || undefined;
+      await login(data.email.trim(), data.password, slug);
       router.replace('/dashboard');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed');
+      const msg = e instanceof Error ? e.message : 'Login failed';
+      if (msg.includes('Tenant selection is required') && tenantOptions.length === 0) {
+        try {
+          const tenants = await authApi.tenantsForEmail(data.email.trim());
+          if (tenants.length === 1) {
+            setSelectedSlug(tenants[0].slug);
+            await login(data.email.trim(), data.password, tenants[0].slug);
+            router.replace('/dashboard');
+            return;
+          }
+          if (tenants.length > 1) {
+            setTenantOptions(tenants);
+            setSelectedSlug(tenants[0].slug);
+            setError('Your account is linked to multiple organisations. Please select one below and sign in again.');
+          } else {
+            setError(msg);
+          }
+        } catch (retryErr) {
+          const retryMsg = retryErr instanceof Error ? retryErr.message : msg;
+          setError(retryMsg);
+        }
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -238,6 +264,22 @@ export default function LoginPage() {
               </Alert>
             )}
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
+              {tenantOptions.length > 1 && (
+                <TextField
+                  select
+                  label="Organisation"
+                  fullWidth
+                  margin="normal"
+                  value={selectedSlug}
+                  onChange={(e) => setSelectedSlug(e.target.value)}
+                >
+                  {tenantOptions.map((t) => (
+                    <MenuItem key={t.slug} value={t.slug}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
               <TextField
                 label="Email"
                 type="email"

@@ -15,6 +15,12 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @Post('tenants-for-email')
+  async tenantsForEmail(@Body('email') email: string) {
+    if (!email) return [];
+    return this.authService.tenantsForEmail(email);
+  }
+
   @Post('login')
   async login(@Body() dto: LoginDto): Promise<AuthResult> {
     return this.authService.login(dto.tenantSlug, dto.email, dto.password);

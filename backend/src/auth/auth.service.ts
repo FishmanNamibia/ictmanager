@@ -146,6 +146,19 @@ export class AuthService {
     return this.issueToken(user);
   }
 
+  async tenantsForEmail(email: string): Promise<{ slug: string; name: string }[]> {
+    const users = (await this.usersService.findActiveByEmail(email))
+      .filter((u) => u.tenant?.active);
+    const seen = new Set<string>();
+    const result: { slug: string; name: string }[] = [];
+    for (const u of users) {
+      if (!u.tenant || seen.has(u.tenantId)) continue;
+      seen.add(u.tenantId);
+      result.push({ slug: u.tenant.slug, name: u.tenant.name });
+    }
+    return result;
+  }
+
   async validateSession(payload: JwtPayload): Promise<AuthenticatedRequestUser | null> {
     try {
       await this.tenantService.findActiveById(payload.tenantId);
