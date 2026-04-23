@@ -21,6 +21,7 @@ import { VendorsContractsModule } from './vendors-contracts/vendors-contracts.mo
 import { ChangeManagementModule } from './change-management/change-management.module';
 import { AutomationModule } from './automation/automation.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { OwnerModule } from './owner/owner.module';
 import { getTypeOrmConfig } from './config/typeorm.config';
 
 @Module({
@@ -49,6 +50,7 @@ import { getTypeOrmConfig } from './config/typeorm.config';
     ChangeManagementModule,
     AutomationModule,
     NotificationsModule,
+    OwnerModule,
   ],
 })
 export class AppModule {}

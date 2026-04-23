@@ -36,7 +36,7 @@ export class TenantService {
 
   async findAllActive(): Promise<Tenant[]> {
     return this.repo.find({
-      where: { active: true },
+      where: { active: true, isSystemTenant: false },
       order: { name: 'ASC' },
     });
   }

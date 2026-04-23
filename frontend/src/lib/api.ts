@@ -2,13 +2,10 @@ import { PublicTenantBranding, TenantSettings } from '@/lib/tenant-settings';
 
 // Base URL must be valid at runtime (NEXT_PUBLIC_* can be undefined in some builds)
 export const getApiBaseUrl = (): string => {
-  const runtimeDefault =
-    typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:3001/api`
-      : 'http://localhost:3001/api';
+  const runtimeDefault = '/api';
   const base = process.env.NEXT_PUBLIC_API_URL ?? runtimeDefault;
   const trimmed = (base || runtimeDefault).trim().replace(/\/$/, '');
-  return trimmed || 'http://localhost:3001/api';
+  return trimmed || '/api';
 };
 
 const TOKEN_KEY = 'iictms_token';

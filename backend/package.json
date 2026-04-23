@@ -12,6 +12,7 @@
     "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/src/config/typeorm-data-source.js",
     "migration:revert": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/config/typeorm-data-source.js",
     "seed": "node scripts/seed.js",
+    "seed:owner": "node scripts/seed-owner.js",
     "seed:automation-demo": "node scripts/seed-automation-demo.js",
     "test:api": "node scripts/test-api.js"
   },

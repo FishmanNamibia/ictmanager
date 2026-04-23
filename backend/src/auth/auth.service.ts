@@ -123,6 +123,7 @@ export class AuthService {
       modules: { enabled: allModules as TenantExperienceSettings['modules']['enabled'] },
       access: {
         roleModules: {
+          [Role.OWNER]: optionalModules,
           [Role.ICT_MANAGER]: optionalModules,
           [Role.ICT_STAFF]: optionalModules,
           [Role.BUSINESS_MANAGER]: optionalModules,
@@ -161,9 +162,12 @@ export class AuthService {
 
   async validateSession(payload: JwtPayload): Promise<AuthenticatedRequestUser | null> {
     try {
-      await this.tenantService.findActiveById(payload.tenantId);
       const user = await this.usersService.findById(payload.sub, payload.tenantId);
       if (!user.active) return null;
+      // Owner users live in the system tenant — skip active-tenant enforcement
+      if (user.role !== 'owner') {
+        await this.tenantService.findActiveById(payload.tenantId);
+      }
       return {
         id: user.id,
         email: user.email,

@@ -3,6 +3,7 @@
  * Align with frontend and audit.
  */
 export enum Role {
+  OWNER = 'owner',
   ICT_MANAGER = 'ict_manager',
   ICT_STAFF = 'ict_staff',
   BUSINESS_MANAGER = 'business_manager',
@@ -12,6 +13,7 @@ export enum Role {
 }
 
 export const ROLE_HIERARCHY: Record<Role, number> = {
+  [Role.OWNER]: 999,
   [Role.ICT_MANAGER]: 100,
   [Role.ICT_STAFF]: 80,
   [Role.BUSINESS_MANAGER]: 60,

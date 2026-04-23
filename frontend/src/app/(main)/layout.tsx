@@ -25,12 +25,16 @@ export default function MainLayout({
       router.replace('/login');
       return;
     }
+    if (user?.role === 'owner') {
+      router.replace('/owner');
+      return;
+    }
     if (activeModule && !canAccessModule(activeModule.id, user?.role)) {
       router.replace('/dashboard');
     }
   }, [activeModule, canAccessModule, isAuthenticated, loading, router, settingsLoading, user?.role]);
 
-  if (loading || settingsLoading || !isAuthenticated || (activeModule && !canAccessModule(activeModule.id, user?.role))) {
+  if (loading || settingsLoading || !isAuthenticated || user?.role === 'owner' || (activeModule && !canAccessModule(activeModule.id, user?.role))) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />

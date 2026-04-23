@@ -53,7 +53,7 @@ const featureCards = [
 ];
 
 export default function LoginPage() {
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated, loading, user } = useAuth();
   const router = useRouter();
   const [logoSrc, setLogoSrc] = useState('/logo/ict-management-system.png');
   const [error, setError] = useState<string | null>(null);
@@ -77,9 +77,9 @@ export default function LoginPage() {
   // calling router during render (which triggers React warnings and double nav).
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.replace('/dashboard');
+      router.replace(user?.role === 'owner' ? '/owner' : '/dashboard');
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading, router, user?.role]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -113,8 +113,12 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const slug = selectedSlug || undefined;
-      await login(data.email.trim(), data.password, slug);
-      router.replace('/dashboard');
+      const { user: loggedInUser } = await (async () => {
+        await login(data.email.trim(), data.password, slug);
+        const stored = localStorage.getItem('iictms_user');
+        return { user: stored ? JSON.parse(stored) : null };
+      })();
+      router.replace(loggedInUser?.role === 'owner' ? '/owner' : '/dashboard');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Login failed';
       if (msg.includes('Tenant selection is required') && tenantOptions.length === 0) {

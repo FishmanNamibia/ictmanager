@@ -68,6 +68,7 @@ const DEFAULT_BACKGROUND_COLOR = '#f0f2f5';
 const ACCESS_MANAGED_MODULE_IDS = OPTIONAL_TENANT_MODULE_IDS;
 
 const DEFAULT_ROLE_MODULES: Record<Role, TenantModuleId[]> = {
+  [Role.OWNER]: [...ACCESS_MANAGED_MODULE_IDS],
   [Role.ICT_MANAGER]: [...ACCESS_MANAGED_MODULE_IDS],
   [Role.ICT_STAFF]: [...ACCESS_MANAGED_MODULE_IDS],
   [Role.BUSINESS_MANAGER]: [...ACCESS_MANAGED_MODULE_IDS],
@@ -147,6 +148,7 @@ export function normalizeTenantSettings(tenant: Tenant): TenantExperienceSetting
     },
     access: {
       roleModules: {
+        [Role.OWNER]: normalizeRoleModuleIds(roleModules[Role.OWNER], Role.OWNER),
         [Role.ICT_MANAGER]: normalizeRoleModuleIds(roleModules[Role.ICT_MANAGER], Role.ICT_MANAGER),
         [Role.ICT_STAFF]: normalizeRoleModuleIds(roleModules[Role.ICT_STAFF], Role.ICT_STAFF),
         [Role.BUSINESS_MANAGER]: normalizeRoleModuleIds(roleModules[Role.BUSINESS_MANAGER], Role.BUSINESS_MANAGER),
